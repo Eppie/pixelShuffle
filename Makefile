@@ -1,10 +1,10 @@
 assembly=-fverbose-asm -Wa,-alhnd
 
-lab:
-	g++ -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngLAB.cpp -o pngLAB $(assembly) > pngLAB.s
-
 rgb:
 	g++ -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngRGB.cpp -o pngRGB $(assembly) > pngRGB.s
+
+lab:
+	g++ -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngLAB.cpp -o pngLAB $(assembly) > pngLAB.s
 
 debug:
 	g++ -march=native -mtune=native -g -std=c++11 -O0 -lpng pngLAB.cpp -o pngLAB $(assembly) > pngLAB.s

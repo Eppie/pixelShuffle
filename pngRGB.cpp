@@ -130,10 +130,6 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 
 	png_write_info( png, info );
 
-	// To remove the alpha channel for PNG_COLOR_TYPE_RGB format,
-	// Use png_set_filler().
-	//png_set_filler(png, 0, PNG_FILLER_AFTER);
-
 	png_write_image( png, rowPointers );
 	png_write_end( png, NULL );
 
@@ -205,10 +201,12 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 	png_bytep dPx2;
 
 	unsigned long long t;
+	int orderedLoopCount = 200;
+	int randomLoopCount = 50;
 
 	srand( time( NULL ) );
 	for( int l = 0; l < 2; l++ ) {
-		for( int j = 0; j < 100; j++ ) {
+		for( int j = 0; j < orderedLoopCount; j++ ) {
 			for( int i = 0; i < 3e5; i++ ) {
 				k = i + (j*i);
 
@@ -226,16 +224,16 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 				}
 			}
 			t = totalDiff( src, dst );
-			cout << "Iteration #" << j + ( 200 * l ) << ", Diff: " << t << " (ordered)" << endl;
+			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) << ", Diff: " << t << " (ordered)" << endl;
 			ostringstream ss;
-			ss << setw(5) << setfill('0') << j + ( 200 * l );
+			ss << setw(5) << setfill('0') << j + ( 2 * ( orderedLoopCount + randomLoopCount ) * l );
 			string s2(ss.str());
 			string newFilename = "out" + s2 + ".png";
 			writePNGFile( newFilename.c_str(), *srcPtr );
 		}
 
-		for( int j = 100; j < 200; j++ ) {
-			for( int i = 0; i < 3e5; i++ ) {
+		for( int j = 0; j < randomLoopCount; j++ ) {
+			for( int i = 0; i < 1e6; i++ ) {
 				y1 = (rand() % (int)(sHeight));
 				y2 = (rand() % (int)(sHeight));
 				x1 = (rand() % (int)(sWidth));
@@ -255,9 +253,9 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 				}
 			}
 			t = totalDiff( src, dst );
-			cout << "Iteration #" << j + ( 200 * l ) << ", Diff: " << t << " (random)" << endl;
+			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount << ", Diff: " << t << " (random)" << endl;
 			ostringstream ss;
-			ss << setw(5) << setfill('0') << j + ( 200 * l );
+			ss << setw(5) << setfill('0') << j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount;
 			string s2(ss.str());
 			string newFilename = "out" + s2 + ".png";
 			writePNGFile( newFilename.c_str(), *srcPtr );
