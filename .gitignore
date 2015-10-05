@@ -26,3 +26,8 @@
 *.exe
 *.out
 *.app
+
+pngRGB
+pngRGB.s
+pngLAB
+pngLAB.s
