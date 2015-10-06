@@ -199,11 +199,11 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 	png_bytep dPx2;
 
 	unsigned long long t;
-	int orderedLoopCount = 200;
-	int randomLoopCount = 50;
+	int orderedLoopCount = 150;
+	int randomLoopCount = 100;
 
 	srand( time( NULL ) );
-	for( int l = 0; l < 2; l++ ) {
+	for( int l = 0; l < 1; l++ ) {
 		for( int j = 0; j < orderedLoopCount; j++ ) {
 			for( int i = 0; i < 3e5; i++ ) {
 				k = i + (j*i);
@@ -231,7 +231,7 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 		}
 
 		for( int j = 0; j < randomLoopCount; j++ ) {
-			for( int i = 0; i < 1e6; i++ ) {
+			for( int i = 0; i < j*1e5; i++ ) {
 				y1 = (rand() % (int)(sHeight));
 				y2 = (rand() % (int)(sHeight));
 				x1 = (rand() % (int)(sWidth));
