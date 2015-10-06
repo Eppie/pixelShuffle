@@ -164,15 +164,14 @@ unsigned long long totalDiff( png_bytep *src, png_bytep *dst ) {
 	png_bytep rowDst;
 	png_bytep sPx;
 	png_bytep dPx;
+	int length = sHeight * sWidth;
 
-	for( int y = 0; y < sHeight; y++ ) {
-		rowSrc = src[y];
-		rowDst = dst[y];
-		for( int x = 0; x < sWidth; x++ ) {
-			sPx = &(rowSrc[x * 4]);
-			dPx = &(rowDst[x * 4]);
-			totalDiff += pixelDiff( sPx, dPx );
-		}
+	for( int i = 0; i < length; i++ ) {
+		rowSrc = src[(i / sHeight) % sHeight];
+		rowDst = dst[(i / dHeight) % dHeight];
+		sPx = &(rowSrc[( i % sWidth ) * 4]);
+		dPx = &(rowDst[( i % dWidth ) * 4]);
+		totalDiff += pixelDiff( sPx, dPx );
 	}
 	return totalDiff;
 }
@@ -182,6 +181,11 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 	int x2;
 	int y1;
 	int y2;
+
+	int ry1;
+	int ry2;
+	int rx1;
+	int rx2;
 	
 	int k = 0;
 	int srcX;
@@ -210,13 +214,13 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 
 				sy1 = src[(k/sHeight)%sHeight];
 				sy2 = src[k%sHeight];
-				dy1 = dst[(k/sHeight)%sHeight];
-				dy2 = dst[k%sHeight];
+				dy1 = dst[(k/dHeight)%dHeight];
+				dy2 = dst[k%dHeight];
 
 				sPx1 = &(sy1[((k/sWidth)%sWidth)*4]);
 				sPx2 = &(sy2[(k%sWidth)*4]);
-				dPx1 = &(dy1[((k/sWidth)%sWidth)*4]);
-				dPx2 = &(dy2[(k%sWidth)*4]);
+				dPx1 = &(dy1[((k/dWidth)%dWidth)*4]);
+				dPx2 = &(dy2[(k%dWidth)*4]);
 				if( determineSwap( sPx1, sPx2, dPx1, dPx2 ) ) {
 					swapPixels( sPx1, sPx2 );
 				}
@@ -232,20 +236,25 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 
 		for( int j = 0; j < randomLoopCount; j++ ) {
 			for( int i = 0; i < j*1e5; i++ ) {
-				y1 = (rand() % (int)(sHeight));
-				y2 = (rand() % (int)(sHeight));
-				x1 = (rand() % (int)(sWidth));
-				x2 = (rand() % (int)(sWidth));
+				//y1 = (rand() % (int)(sHeight));
+				//y2 = (rand() % (int)(sHeight));
+				//x1 = (rand() % (int)(sWidth));
+				//x2 = (rand() % (int)(sWidth));
 
-				sy1 = src[y1];
-				sy2 = src[y2];
-				dy1 = dst[y1];
-				dy2 = dst[y2];
+				ry1 = rand();
+				ry2 = rand();
+				rx1 = rand();
+				rx2 = rand();
 
-				sPx1 = &(sy1[x1*4]);
-				sPx2 = &(sy2[x2*4]);
-				dPx1 = &(dy1[x1*4]);
-				dPx2 = &(dy2[x2*4]);
+				sy1 = src[ry1 % (int)sHeight];
+				sy2 = src[ry2 % (int)sHeight];
+				dy1 = dst[ry1 % (int)dHeight];
+				dy2 = dst[ry2 % (int)dHeight];
+
+				sPx1 = &(sy1[(rx1 % sWidth)*4]);
+				sPx2 = &(sy2[(rx2 % sWidth)*4]);
+				dPx1 = &(dy1[(rx1 % dWidth)*4]);
+				dPx2 = &(dy2[(rx2 % dWidth)*4]);
 				if( determineSwap( sPx1, sPx2, dPx1, dPx2 ) ) {
 					swapPixels( sPx1, sPx2 );
 				}
