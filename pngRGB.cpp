@@ -82,8 +82,8 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 
 	png_read_update_info( png, info );
 
-	rowPointers = (png_bytep*) realloc(rowPointers, sizeof( png_bytep ) * sHeight );
-	for( int y = 0; y < sHeight; y++ ) {
+	rowPointers = (png_bytep*) realloc( rowPointers, sizeof( png_bytep ) * *height );
+	for( int y = 0; y < *height; y++ ) {
 		rowPointers[y] = (png_byte*) malloc( png_get_rowbytes( png, info ) );
 	}
 
@@ -93,8 +93,6 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 }
 
 void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = false ) {
-	int y;
-
 	FILE *fp = fopen(filename, "wb");
 	if( !fp ) {
 		abort();
@@ -226,7 +224,7 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			t = totalDiff( src, dst );
 			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) << ", Diff: " << t << " (ordered)" << endl;
 			ostringstream ss;
-			ss << setw(5) << setfill('0') << j + ( 2 * ( orderedLoopCount + randomLoopCount ) * l );
+			ss << setw(5) << setfill('0') << j + ( ( orderedLoopCount + randomLoopCount ) * l );
 			string s2(ss.str());
 			string newFilename = "out" + s2 + ".png";
 			writePNGFile( newFilename.c_str(), *srcPtr );
