@@ -18,9 +18,11 @@ int diffG;
 int diffB;
 
 png_bytep *rowPointersSrc = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
+png_bytep *rowPointersNew = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
 png_bytep *rowPointersDst = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
 
 png_bytep **srcPtr = &rowPointersSrc;
+png_bytep **newPtr = &rowPointersNew;
 png_bytep **dstPtr = &rowPointersDst;
 
 void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* height ) {
@@ -51,9 +53,6 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 	color_type = png_get_color_type( png, info );
 	bit_depth  = png_get_bit_depth( png, info );
 
-	// Read any color_type into 8bit depth, RGBA format.
-	// See http://www.libpng.org/pub/png/libpng-manual.txt
-
 	if( bit_depth == 16 ) {
 		png_set_strip_16( png );
 	}
@@ -62,7 +61,6 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 		png_set_palette_to_rgb( png );
 	}
 
-	// PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
 	if( color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8 ) {
 		png_set_expand_gray_1_2_4_to_8( png );
 	}
@@ -71,7 +69,6 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 		png_set_tRNS_to_alpha( png );
 	}
 
-	// These color_type don't have an alpha channel then fill it with 0xff.
 	if( color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE ) {
 		png_set_filler( png, 0xFF, PNG_FILLER_AFTER );
 	}
@@ -114,11 +111,10 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 
 	png_init_io( png, fp );
 
-	// Output is 8bit depth, RGBA format.
 	png_set_IHDR(
 		png,
 		info,
-		sWidth, sHeight,
+		dWidth, dHeight,
 		8,
 		PNG_COLOR_TYPE_RGBA,
 		PNG_INTERLACE_NONE,
@@ -132,7 +128,7 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 	png_write_end( png, NULL );
 
 	if( done ) {
-		for( int y = 0; y < sHeight; y++ ) {
+		for( int y = 0; y < dHeight; y++ ) {
 			free( rowPointers[y] );
 		}
 		free( rowPointers );
@@ -164,12 +160,12 @@ unsigned long long totalDiff( png_bytep *src, png_bytep *dst ) {
 	png_bytep rowDst;
 	png_bytep sPx;
 	png_bytep dPx;
-	int length = sHeight * sWidth;
+	int length = dHeight * dWidth;
 
 	for( int i = 0; i < length; i++ ) {
-		rowSrc = src[(i / sHeight) % sHeight];
+		rowSrc = src[(i / dHeight) % dHeight];
 		rowDst = dst[(i / dHeight) % dHeight];
-		sPx = &(rowSrc[( i % sWidth ) * 4]);
+		sPx = &(rowSrc[( i % dWidth ) * 4]);
 		dPx = &(rowDst[( i % dWidth ) * 4]);
 		totalDiff += pixelDiff( sPx, dPx );
 	}
@@ -177,17 +173,13 @@ unsigned long long totalDiff( png_bytep *src, png_bytep *dst ) {
 }
 
 void processPNGFile( png_bytep *src, png_bytep *dst ) {
+	int k;
+
 	int x1;
 	int x2;
 	int y1;
 	int y2;
 
-	int ry1;
-	int ry2;
-	int rx1;
-	int rx2;
-	
-	int k = 0;
 	int srcX;
 	int srcY;
 	int dstX;
@@ -212,13 +204,13 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			for( int i = 0; i < 3e5; i++ ) {
 				k = i + (j*i);
 
-				sy1 = src[(k/sHeight)%sHeight];
-				sy2 = src[k%sHeight];
+				sy1 = src[(k/dHeight)%dHeight];
+				sy2 = src[k%dHeight];
 				dy1 = dst[(k/dHeight)%dHeight];
 				dy2 = dst[k%dHeight];
 
-				sPx1 = &(sy1[((k/sWidth)%sWidth)*4]);
-				sPx2 = &(sy2[(k%sWidth)*4]);
+				sPx1 = &(sy1[((k/dWidth)%dWidth)*4]);
+				sPx2 = &(sy2[(k%dWidth)*4]);
 				dPx1 = &(dy1[((k/dWidth)%dWidth)*4]);
 				dPx2 = &(dy2[(k%dWidth)*4]);
 				if( determineSwap( sPx1, sPx2, dPx1, dPx2 ) ) {
@@ -231,30 +223,25 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			ss << setw(5) << setfill('0') << j + ( ( orderedLoopCount + randomLoopCount ) * l );
 			string s2(ss.str());
 			string newFilename = "out" + s2 + ".png";
-			writePNGFile( newFilename.c_str(), *srcPtr );
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 
 		for( int j = 0; j < randomLoopCount; j++ ) {
 			for( int i = 0; i < j*1e5; i++ ) {
-				//y1 = (rand() % (int)(sHeight));
-				//y2 = (rand() % (int)(sHeight));
-				//x1 = (rand() % (int)(sWidth));
-				//x2 = (rand() % (int)(sWidth));
+				y1 = (rand() % (int)(dHeight));
+				y2 = (rand() % (int)(dHeight));
+				x1 = (rand() % (int)(dWidth));
+				x2 = (rand() % (int)(dWidth));
 
-				ry1 = rand();
-				ry2 = rand();
-				rx1 = rand();
-				rx2 = rand();
+				sy1 = src[y1];
+				sy2 = src[y2];
+				dy1 = dst[y1];
+				dy2 = dst[y2];
 
-				sy1 = src[ry1 % (int)sHeight];
-				sy2 = src[ry2 % (int)sHeight];
-				dy1 = dst[ry1 % (int)dHeight];
-				dy2 = dst[ry2 % (int)dHeight];
-
-				sPx1 = &(sy1[(rx1 % sWidth)*4]);
-				sPx2 = &(sy2[(rx2 % sWidth)*4]);
-				dPx1 = &(dy1[(rx1 % dWidth)*4]);
-				dPx2 = &(dy2[(rx2 % dWidth)*4]);
+				sPx1 = &(sy1[x1*4]);
+				sPx2 = &(sy2[x2*4]);
+				dPx1 = &(dy1[x1*4]);
+				dPx2 = &(dy2[x2*4]);
 				if( determineSwap( sPx1, sPx2, dPx1, dPx2 ) ) {
 					swapPixels( sPx1, sPx2 );
 				}
@@ -265,17 +252,32 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			ss << setw(5) << setfill('0') << j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount;
 			string s2(ss.str());
 			string newFilename = "out" + s2 + ".png";
-			writePNGFile( newFilename.c_str(), *srcPtr );
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 	}
 }
 
 int main( int argc, char *argv[] ) {
 
+	// Output shape should be that of the dst image.
 	readPNGFile( argv[1], *srcPtr, &sWidth, &sHeight );
 	readPNGFile( argv[2], *dstPtr, &dWidth, &dHeight );
-	processPNGFile( *srcPtr, *dstPtr );
-	writePNGFile( argv[3], *srcPtr, true );
+	
+	rowPointersNew = (png_bytep*) realloc( rowPointersNew, sizeof( png_bytep ) * dHeight );
+	for( int y = 0; y < dHeight; y++ ) {
+		rowPointersNew[y] = (png_byte*) malloc( sizeof( png_bytep ) * dWidth * 4 );
+	}
+
+	for( int i = 0; i < dHeight * dWidth; i++ ) {
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+0] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+0];
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+1] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+1];
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+2] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+2];
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+3] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+3];
+	}
+
+	writePNGFile( "first.png", *newPtr);
+	processPNGFile( *newPtr, *dstPtr );
+	writePNGFile( argv[3], *newPtr, true );
 
 	return 0;
 }
