@@ -21,28 +21,24 @@ function generateImage {
 	rm -f out* $outFileName.yuv
 }
 
-#small=(balls gothic mona scream starry stream)
-
-#for i in ${small[@]}; do
-	#for j in ${small[@]}; do
-		#if [ $i != $j ]; then
-			#echo "Now starting on ${i}TO${j}"
-			#generateImage $i $j &
-		#fi
-	#done
-	#wait
-#done
-
-#big=(b2w gothicBig monaBig starryBig)
-big=(b2w w2b)
-
-for i in ${big[@]}; do
-	for j in ${big[@]}; do
-		if [ $i != $j ]; then
-			echo "Now starting on ${i}TO${j}"
-			generateImage $i $j &
-		fi
+function processArray {
+	declare -a arr=("${!1}")
+	echo "${arr[@]}"
+	for i in ${arr[@]}; do
+		for j in ${arr[@]}; do
+			if [ $i != $j ]; then
+				echo "Now starting on ${i}TO${j}"
+				generateImage $i $j &
+			fi
+		done
+		wait
 	done
-	wait
-done
+}
 
+small=(balls gothic mona scream starry stream)
+big=(b2w gothicBig monaBig starryBig)
+gradient=(b2w w2b)
+
+processArray small[@]
+processArray big[@]
+processArray gradient[@]
