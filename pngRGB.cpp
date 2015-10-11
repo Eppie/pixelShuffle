@@ -16,10 +16,11 @@ int dHeight;
 int diffR;
 int diffG;
 int diffB;
+string filePrefix;
 
-png_bytep *rowPointersSrc = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
-png_bytep *rowPointersNew = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
-png_bytep *rowPointersDst = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
+png_bytep *rowPointersSrc = (png_bytep*) malloc( sizeof( png_bytep ) * 5000 );
+png_bytep *rowPointersNew = (png_bytep*) malloc( sizeof( png_bytep ) * 5000 );
+png_bytep *rowPointersDst = (png_bytep*) malloc( sizeof( png_bytep ) * 5000 );
 
 png_bytep **srcPtr = &rowPointersSrc;
 png_bytep **newPtr = &rowPointersNew;
@@ -137,20 +138,20 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 	fclose(fp);
 }
 
-int pixelDiff( png_bytep px1, png_bytep px2 ) {
+inline int pixelDiff( png_bytep px1, png_bytep px2 ) {
 	diffR = px1[0] - px2[0];
 	diffG = px1[1] - px2[1];
 	diffB = px1[2] - px2[2];
 	return (diffR * diffR) + (diffG * diffG) + (diffB * diffB);
 }
 
-void swapPixels( png_bytep px1, png_bytep px2 ) {
+inline void swapPixels( png_bytep px1, png_bytep px2 ) {
 	swap( px1[0], px2[0] );
 	swap( px1[1], px2[1] );
 	swap( px1[2], px2[2] );
 }
 
-bool determineSwap( png_bytep sPx1, png_bytep sPx2, png_bytep dPx1, png_bytep dPx2 ) {
+inline bool determineSwap( png_bytep sPx1, png_bytep sPx2, png_bytep dPx1, png_bytep dPx2 ) {
 	return pixelDiff( sPx1, dPx2 ) + pixelDiff( sPx2, dPx1 ) < pixelDiff( sPx1, dPx1 ) + pixelDiff( sPx2, dPx2 );
 }
 
@@ -220,9 +221,9 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			t = totalDiff( src, dst );
 			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) << ", Diff: " << t << " (ordered)" << endl;
 			ostringstream ss;
-			ss << setw(5) << setfill('0') << j + ( ( orderedLoopCount + randomLoopCount ) * l );
+			ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l );
 			string s2(ss.str());
-			string newFilename = "out" + s2 + ".png";
+			string newFilename = filePrefix + s2 + ".png";
 			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 
@@ -249,20 +250,28 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			t = totalDiff( src, dst );
 			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount << ", Diff: " << t << " (random)" << endl;
 			ostringstream ss;
-			ss << setw(5) << setfill('0') << j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount;
+			ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount;
 			string s2(ss.str());
-			string newFilename = "out" + s2 + ".png";
+			string newFilename = filePrefix + s2 + ".png";
 			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 	}
 }
 
+string split( string &s ) {
+	stringstream ss( s );
+	string result;
+	getline( ss, result, '/' );
+	getline( ss, result, '.' );
+	return result;
+}
+
 int main( int argc, char *argv[] ) {
 
-	// Output shape should be that of the dst image.
 	readPNGFile( argv[1], *srcPtr, &sWidth, &sHeight );
 	readPNGFile( argv[2], *dstPtr, &dWidth, &dHeight );
 	
+	// Output shape should be that of the dst image.
 	rowPointersNew = (png_bytep*) realloc( rowPointersNew, sizeof( png_bytep ) * dHeight );
 	for( int y = 0; y < dHeight; y++ ) {
 		rowPointersNew[y] = (png_byte*) malloc( sizeof( png_bytep ) * dWidth * 4 );
@@ -275,7 +284,11 @@ int main( int argc, char *argv[] ) {
 		rowPointersNew[i / dWidth][((i % dWidth)*4)+3] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+3];
 	}
 
-	writePNGFile( "first.png", *newPtr);
+	ostringstream ss;
+	ss << argv[3];
+	filePrefix = ss.str();
+	filePrefix = "out" + split( filePrefix );
+	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr);
 	processPNGFile( *newPtr, *dstPtr );
 	writePNGFile( argv[3], *newPtr, true );
 
