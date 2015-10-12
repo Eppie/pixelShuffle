@@ -40,7 +40,7 @@ big=(b2w gothicBig monaBig starryBig rgbGradient1)
 gradient1=(b2w w2b)
 gradient2=(rgbGradient1 rgbGradient2)
 
-#processArray small[@]
+processArray small[@]
 processArray big[@]
-#processArray gradient1[@]
+processArray gradient1[@]
 processArray gradient2[@]
