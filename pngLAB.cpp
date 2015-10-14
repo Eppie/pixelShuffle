@@ -9,11 +9,14 @@
 
 using namespace std;
 
-int width;
-int height;
+int sWidth;
+int sHeight;
+int dWidth;
+int dHeight;
 double diffL;
 double diffa;
 double diffb;
+string filePrefix;
 
 struct Color {
 	double A;
@@ -24,13 +27,15 @@ struct Color {
 	png_byte b;
 };
 
-png_bytep *rowPointersSrc = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
-png_bytep *rowPointersDst = (png_bytep*) malloc( sizeof( png_bytep ) * 1000 );
+png_bytep *rowPointersSrc = (png_bytep*) malloc( sizeof( png_bytep ) * 5000 );
+png_bytep *rowPointersNew = (png_bytep*) malloc( sizeof( png_bytep ) * 5000 );
+png_bytep *rowPointersDst = (png_bytep*) malloc( sizeof( png_bytep ) * 5000 );
 
 png_bytep **srcPtr = &rowPointersSrc;
+png_bytep **newPtr = &rowPointersNew;
 png_bytep **dstPtr = &rowPointersDst;
 
-void readPNGFile( char *filename, png_bytep *rowPointers ) {
+void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* height ) {
 	png_byte bit_depth;
 	png_byte color_type;
 	FILE *fp = fopen( filename, "rb" );
@@ -53,13 +58,10 @@ void readPNGFile( char *filename, png_bytep *rowPointers ) {
 
 	png_read_info( png, info );
 
-	width      = png_get_image_width( png, info );
-	height     = png_get_image_height( png, info );
+	*width = png_get_image_width( png, info );
+	*height = png_get_image_height( png, info );
 	color_type = png_get_color_type( png, info );
-	bit_depth  = png_get_bit_depth( png, info );
-
-	// Read any color_type into 8bit depth, RGBA format.
-	// See http://www.libpng.org/pub/png/libpng-manual.txt
+	bit_depth = png_get_bit_depth( png, info );
 
 	if( bit_depth == 16 ) {
 		png_set_strip_16( png );
@@ -69,7 +71,6 @@ void readPNGFile( char *filename, png_bytep *rowPointers ) {
 		png_set_palette_to_rgb( png );
 	}
 
-	// PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
 	if( color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8 ) {
 		png_set_expand_gray_1_2_4_to_8( png );
 	}
@@ -78,7 +79,6 @@ void readPNGFile( char *filename, png_bytep *rowPointers ) {
 		png_set_tRNS_to_alpha( png );
 	}
 
-	// These color_type don't have an alpha channel then fill it with 0xff.
 	if( color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE ) {
 		png_set_filler( png, 0xFF, PNG_FILLER_AFTER );
 	}
@@ -89,8 +89,8 @@ void readPNGFile( char *filename, png_bytep *rowPointers ) {
 
 	png_read_update_info( png, info );
 
-	rowPointers = (png_bytep*) realloc(rowPointers, sizeof( png_bytep ) * height );
-	for( int y = 0; y < height; y++ ) {
+	rowPointers = (png_bytep*) realloc( rowPointers, sizeof( png_bytep ) * *height );
+	for( int y = 0; y < *height; y++ ) {
 		rowPointers[y] = (png_byte*) malloc( png_get_rowbytes( png, info ) );
 	}
 
@@ -99,10 +99,8 @@ void readPNGFile( char *filename, png_bytep *rowPointers ) {
 	fclose( fp );
 }
 
-void writePNGFile( const char *filename, png_bytep *rowPointers ) {
-	int y;
-
-	FILE *fp = fopen(filename, "wb");
+void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = false ) {
+	FILE *fp = fopen( filename, "wb" );
 	if( !fp ) {
 		abort();
 	}
@@ -123,32 +121,20 @@ void writePNGFile( const char *filename, png_bytep *rowPointers ) {
 
 	png_init_io( png, fp );
 
-	// Output is 8bit depth, RGBA format.
-	png_set_IHDR(
-		png,
-		info,
-		width, height,
-		8,
-		PNG_COLOR_TYPE_RGB,
-		PNG_INTERLACE_NONE,
-		PNG_COMPRESSION_TYPE_DEFAULT,
-		PNG_FILTER_TYPE_DEFAULT
-	);
+	png_set_IHDR( png, info, dWidth, dHeight, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
 
 	png_write_info( png, info );
-
-	// To remove the alpha channel for PNG_COLOR_TYPE_RGB format,
-	// Use png_set_filler().
-	png_set_filler(png, 0, PNG_FILLER_AFTER);
 
 	png_write_image( png, rowPointers );
 	png_write_end( png, NULL );
 
-	for( int y = 0; y < height; y++ ) {
-		free( rowPointers[y] );
+	if( done ) {
+		for( int y = 0; y < dHeight; y++ ) {
+			free( rowPointers[y] );
+		}
+		free( rowPointers );
 	}
 
-	free( rowPointers );
 	fclose(fp);
 }
 
@@ -217,12 +203,12 @@ inline Color** imageToLab( png_bytep *image ) {
 	png_bytep oldRow;
 	Color* newRow;
 	png_bytep px;
-	Color **result = (Color**) malloc( sizeof( Color* ) * height );
-	for( int y = 0; y < height; y++ ) {
-		result[y] = (Color*) malloc( sizeof( Color ) * width );
+	Color **result = (Color**) malloc( sizeof( Color* ) * dHeight );
+	for( int y = 0; y < dHeight; y++ ) {
+		result[y] = (Color*) malloc( sizeof( Color ) * dWidth );
 		newRow = result[y];
 		oldRow = image[y];
-		for( int x = 0; x < width; x++ ) {
+		for( int x = 0; x < dWidth; x++ ) {
 			px = &oldRow[x*4];
 			lab = RGBToLab( px );
 			newRow[x] = lab;
@@ -235,10 +221,10 @@ inline void labToImage( Color **lab, png_bytep *image ) {
 	png_bytep newRow;
 	Color* oldRow;
 	Color RGB;
-	for( int y = 0; y < height; y++ ) {
+	for( int y = 0; y < dHeight; y++ ) {
 		oldRow = lab[y];
 		newRow = image[y];
-		for( int x = 0; x < width; x++ ) {
+		for( int x = 0; x < dWidth; x++ ) {
 			RGB = oldRow[x];
 			newRow[(x*4)+0] = RGB.r;
 			newRow[(x*4)+1] = RGB.g;
@@ -247,73 +233,139 @@ inline void labToImage( Color **lab, png_bytep *image ) {
 	}
 }
 
+unsigned long long totalDiff( Color **src, Color **dst ) {
+	unsigned long long totalDiff = 0;
+	Color* rowSrc;
+	Color* rowDst;
+	Color* sPx;
+	Color* dPx;
+	int length = dHeight * dWidth;
+
+	for( int i = 0; i < length; i++ ) {
+		rowSrc = src[(i / dHeight) % dHeight];
+		rowDst = dst[(i / dHeight) % dHeight];
+		sPx = &(rowSrc[( i % dWidth )]);
+		dPx = &(rowDst[( i % dWidth )]);
+		totalDiff += pixelDiff( sPx, dPx );
+	}
+	return totalDiff;
+}
+
 void processPNGFile( Color** src, Color** dst ) {
-	int x1, x2, y1, y2, k;
+	int k;
+
+	int x1;
+	int x2;
+	int y1;
+	int y2;
+
 	Color *sy1, *sy2, *dy1, *dy2;
 	Color *sPx1, *sPx2, *dPx1, *dPx2;
+	
+	unsigned long long t;
+	int orderedLoopCount = 150;
+	int randomLoopCount = 100;
 
 	srand( time( NULL ) );
 
-	for( int j = 0; j < 200; j++ ) {
-		for( int i = 0; i < 3e5; i++ ) {
-			k = i + (j*i);
-			sy1 = src[(k/height)%height];
-			sy2 = src[k%height];
-			dy1 = dst[(k/height)%height];
-			dy2 = dst[k%height];
+	for( int l = 0; l < 1; l++ ) {
+		for( int j = 0; j < orderedLoopCount; j++ ) {
+			for( int i = 0; i < 3e5; i++ ) {
+				k = i + (j*i);
 
-			sPx1 = &(sy1[((k/width)%width)]);
-			sPx2 = &(sy2[(k%width)]);
-			dPx1 = &(dy1[((k/width)%width)]);
-			dPx2 = &(dy2[(k%width)]);
-			if( pixelDiff( sPx1, dPx2 ) + pixelDiff( sPx2, dPx1 ) < pixelDiff( sPx1, dPx1 ) + pixelDiff( sPx2, dPx2 ) ) {
-				swapPixels( sPx1, sPx2 );
+				sy1 = src[(k/dHeight)%dHeight];
+				sy2 = src[k%dHeight];
+				dy1 = dst[(k/dHeight)%dHeight];
+				dy2 = dst[k%dHeight];
+
+				sPx1 = &(sy1[((k/dWidth)%dWidth)]);
+				sPx2 = &(sy2[(k%dWidth)]);
+				dPx1 = &(dy1[((k/dWidth)%dWidth)]);
+				dPx2 = &(dy2[(k%dWidth)]);
+				if( pixelDiff( sPx1, dPx2 ) + pixelDiff( sPx2, dPx1 ) < pixelDiff( sPx1, dPx1 ) + pixelDiff( sPx2, dPx2 ) ) {
+					swapPixels( sPx1, sPx2 );
+				}
 			}
+			t = totalDiff( src, dst );
+			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) << ", Diff: " << t << " (ordered)" << endl;
+			ostringstream ss;
+			ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l );
+			string s2(ss.str());
+			string newFilename = filePrefix + s2 + ".png";
+			labToImage( src, *newPtr );
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
-		//ostringstream ss;
-		//ss << setw(5) << setfill('0') << j;
-		//string s2(ss.str());
-		//string newFilename = "out" + s2 + ".png";
-		//labToImage( src, *srcPtr );
-		//writePNGFile( newFilename.c_str(), *srcPtr );
-	}
 
-	for( int j = 0; j < 200; j++ ) {
-		for( int i = 0; i < 5e6; i++ ) {
-			y1 = (rand() % (int)(height));
-			y2 = (rand() % (int)(height));
-			x1 = (rand() % (int)(width));
-			x2 = (rand() % (int)(width));
+		for( int j = 0; j < randomLoopCount; j++ ) {
+			for( int i = 0; i < j*1e5; i++ ) {
+				y1 = (rand() % (int)(dHeight));
+				y2 = (rand() % (int)(dHeight));
+				x1 = (rand() % (int)(dWidth));
+				x2 = (rand() % (int)(dWidth));
 
-			sy1 = src[y1];
-			sy2 = src[y2];
-			dy1 = dst[y1];
-			dy2 = dst[y2];
+				sy1 = src[y1];
+				sy2 = src[y2];
+				dy1 = dst[y1];
+				dy2 = dst[y2];
 
-			sPx1 = &(sy1[x1]);
-			sPx2 = &(sy2[x2]);
-			dPx1 = &(dy1[x1]);
-			dPx2 = &(dy2[x2]);
-			if( pixelDiff( sPx1, dPx2 ) + pixelDiff( sPx2, dPx1 ) < pixelDiff( sPx1, dPx1 ) + pixelDiff( sPx2, dPx2 ) ) {
-				swapPixels( sPx1, sPx2 );
+				sPx1 = &(sy1[x1]);
+				sPx2 = &(sy2[x2]);
+				dPx1 = &(dy1[x1]);
+				dPx2 = &(dy2[x2]);
+				if( pixelDiff( sPx1, dPx2 ) + pixelDiff( sPx2, dPx1 ) < pixelDiff( sPx1, dPx1 ) + pixelDiff( sPx2, dPx2 ) ) {
+					swapPixels( sPx1, sPx2 );
+				}
 			}
+			t = totalDiff( src, dst );
+			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount << ", Diff: " << t << " (random)" << endl;
+			ostringstream ss;
+			ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount;
+			string s2(ss.str());
+			string newFilename = filePrefix + s2 + ".png";
+			labToImage( src, *newPtr );
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
-		//ostringstream ss;
-		//ss << setw(5) << setfill('0') << j+200;
-		//string s2(ss.str());
-		//string newFilename = "out" + s2 + ".png";
-		//labToImage( src, *srcPtr );
-		//writePNGFile( newFilename.c_str(), *srcPtr );
 	}
 }
 
+string split( string &s ) {
+	stringstream ss( s );
+	string result;
+	getline( ss, result, '/' );
+	getline( ss, result, '.' );
+	return result;
+}
+
 int main( int argc, char *argv[] ) {
-	readPNGFile( argv[1], *srcPtr );
-	Color** srcLab = imageToLab( *srcPtr );
-	readPNGFile( argv[2], *dstPtr );
+	readPNGFile( argv[1], *srcPtr, &sWidth, &sHeight );
+	readPNGFile( argv[2], *dstPtr, &dWidth, &dHeight );
+	
+	// Output shape should be that of the dst image.
+	rowPointersNew = (png_bytep*) realloc( rowPointersNew, sizeof( png_bytep ) * dHeight );
+	for( int y = 0; y < dHeight; y++ ) {
+		rowPointersNew[y] = (png_byte*) malloc( sizeof( png_bytep ) * dWidth * 4 );
+	}
+
+	for( int i = 0; i < dHeight * dWidth; i++ ) {
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+0] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+0];
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+1] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+1];
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+2] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+2];
+		rowPointersNew[i / dWidth][((i % dWidth)*4)+3] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+3];
+	}
+
+	Color** srcLab = imageToLab( *newPtr );
 	Color** dstLab = imageToLab( *dstPtr );
+	
+	ostringstream ss;
+	ss << argv[3];
+	filePrefix = ss.str();
+	filePrefix = "out" + split( filePrefix );
+	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
+
 	processPNGFile( srcLab, dstLab );
-	labToImage( srcLab, *srcPtr );
-	writePNGFile( argv[3], *srcPtr );
+	
+	labToImage( srcLab, *newPtr );
+	writePNGFile( argv[3], *newPtr, true );
+	
 	return 0;
 }

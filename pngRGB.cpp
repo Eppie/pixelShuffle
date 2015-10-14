@@ -49,10 +49,10 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 
 	png_read_info( png, info );
 
-	*width      = png_get_image_width( png, info );
-	*height     = png_get_image_height( png, info );
+	*width = png_get_image_width( png, info );
+	*height = png_get_image_height( png, info );
 	color_type = png_get_color_type( png, info );
-	bit_depth  = png_get_bit_depth( png, info );
+	bit_depth = png_get_bit_depth( png, info );
 
 	if( bit_depth == 16 ) {
 		png_set_strip_16( png );
@@ -91,7 +91,7 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 }
 
 void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = false ) {
-	FILE *fp = fopen(filename, "wb");
+	FILE *fp = fopen( filename, "wb" );
 	if( !fp ) {
 		abort();
 	}
@@ -112,16 +112,7 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 
 	png_init_io( png, fp );
 
-	png_set_IHDR(
-		png,
-		info,
-		dWidth, dHeight,
-		8,
-		PNG_COLOR_TYPE_RGBA,
-		PNG_INTERLACE_NONE,
-		PNG_COMPRESSION_TYPE_DEFAULT,
-		PNG_FILTER_TYPE_DEFAULT
-	);
+	png_set_IHDR( png, info, dWidth, dHeight, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
 
 	png_write_info( png, info );
 
@@ -181,11 +172,6 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 	int y1;
 	int y2;
 
-	int srcX;
-	int srcY;
-	int dstX;
-	int dstY;
-
 	png_bytep sy1;
 	png_bytep sy2;
 	png_bytep dy1;
@@ -200,6 +186,7 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 	int randomLoopCount = 100;
 
 	srand( time( NULL ) );
+
 	for( int l = 0; l < 1; l++ ) {
 		for( int j = 0; j < orderedLoopCount; j++ ) {
 			for( int i = 0; i < 3e5; i++ ) {
@@ -288,7 +275,8 @@ int main( int argc, char *argv[] ) {
 	ss << argv[3];
 	filePrefix = ss.str();
 	filePrefix = "out" + split( filePrefix );
-	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr);
+	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
+	
 	processPNGFile( *newPtr, *dstPtr );
 	writePNGFile( argv[3], *newPtr, true );
 
