@@ -1,0 +1,27 @@
+Work computer:
+
+./loop-speed-gcc: 0.117 s, 27.337 GB/s, 3.417 words/ns, 0.293 ns/word
+./xorshift1024sse2-speed-gcc: 0.568 s, 5.632 GB/s, 0.704 words/ns, 1.420 ns/word
+./xorshift128plus-speed-gcc: 0.580 s, 5.515 GB/s, 0.689 words/ns, 1.451 ns/word
+./mcg128-speed-gcc: 0.593 s, 5.401 GB/s, 0.675 words/ns, 1.481 ns/word
+./xorshift4096-speed-gcc: 0.636 s, 5.031 GB/s, 0.629 words/ns, 1.590 ns/word
+./xorshift1024-speed-gcc: 0.638 s, 5.018 GB/s, 0.627 words/ns, 1.594 ns/word
+./xorshift128star8-speed-gcc: 0.654 s, 4.891 GB/s, 0.611 words/ns, 1.636 ns/word
+./xorshift64star32-speed-gcc: 0.701 s, 4.563 GB/s, 0.570 words/ns, 1.753 ns/word
+./xorshift256plus-speed-gcc: 0.709 s, 4.510 GB/s, 0.564 words/ns, 1.774 ns/word
+./xorshift64-speed-gcc: 0.714 s, 4.482 GB/s, 0.560 words/ns, 1.785 ns/word
+./xorshift4096star32-speed-gcc: 0.716 s, 4.470 GB/s, 0.559 words/ns, 1.790 ns/word
+./xorshift256star32-speed-gcc: 0.718 s, 4.459 GB/s, 0.557 words/ns, 1.794 ns/word
+./sfmt19937-speed-gcc: 0.807 s, 3.965 GB/s, 0.496 words/ns, 2.018 ns/word
+./splitmix-speed-gcc: 0.918 s, 3.486 GB/s, 0.436 words/ns, 2.295 ns/word
+./mix-speed-gcc: 0.924 s, 3.463 GB/s, 0.433 words/ns, 2.310 ns/word
+./xsadd-speed-gcc: 0.980 s, 3.266 GB/s, 0.408 words/ns, 2.450 ns/word
+./xorgens4096-speed-gcc: 1.012 s, 3.162 GB/s, 0.395 words/ns, 2.530 ns/word
+./ran-speed-gcc: 1.014 s, 3.155 GB/s, 0.394 words/ns, 2.536 ns/word
+./jrand-speed-gcc: 1.176 s, 2.721 GB/s, 0.340 words/ns, 2.940 ns/word
+./mt19937-speed-gcc: 1.324 s, 2.417 GB/s, 0.302 words/ns, 3.309 ns/word
+./well19937a-speed-gcc: 3.731 s, 0.858 GB/s, 0.107 words/ns, 9.329 ns/word
+./well1024a-speed-gcc: 5.076 s, 0.630 GB/s, 0.079 words/ns, 12.689 ns/word
+
+Home VM:
+

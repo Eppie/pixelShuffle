@@ -293,7 +293,7 @@ void processPNGFile( Color** src, Color** dst ) {
 			string s2(ss.str());
 			string newFilename = filePrefix + s2 + ".png";
 			labToImage( src, *newPtr );
-			writePNGFile( newFilename.c_str(), *newPtr );
+			//writePNGFile( newFilename.c_str(), *newPtr );
 		}
 
 		for( int j = 0; j < randomLoopCount; j++ ) {
@@ -323,7 +323,7 @@ void processPNGFile( Color** src, Color** dst ) {
 			string s2(ss.str());
 			string newFilename = filePrefix + s2 + ".png";
 			labToImage( src, *newPtr );
-			writePNGFile( newFilename.c_str(), *newPtr );
+			//writePNGFile( newFilename.c_str(), *newPtr );
 		}
 	}
 }
@@ -360,12 +360,12 @@ int main( int argc, char *argv[] ) {
 	ss << argv[3];
 	filePrefix = ss.str();
 	filePrefix = "out" + split( filePrefix );
-	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
+	//writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
 
 	processPNGFile( srcLab, dstLab );
 	
 	labToImage( srcLab, *newPtr );
-	writePNGFile( argv[3], *newPtr, true );
+	//writePNGFile( argv[3], *newPtr, true );
 	
 	return 0;
 }

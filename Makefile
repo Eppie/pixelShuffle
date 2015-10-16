@@ -14,5 +14,5 @@ clean:
 	rm -rf pngLAB pngRGB *out* test* *.s
 
 profile: rgb
-	valgrind -v --tool=callgrind --log-fd=1 --dump-instr=yes --collect-jumps=yes --collect-systime=yes --cache-sim=yes --branch-sim=yes ./pngRGB images/mona.png images/gothic.png test.png
+	valgrind -v --tool=callgrind --log-fd=1 --dump-instr=yes --collect-jumps=yes --cache-sim=yes --branch-sim=yes --simulate-wb=yes --simulate-hwpref=yes --cacheuse=yes ./pngRGB images/mona.png images/gothic.png test.png
 
