@@ -1,18 +1,12 @@
-#include <png.h>
-#include <stdlib.h>
-#include <time.h>
 #include <iostream>
 #include <cmath>
-#include <string>
 #include <sstream>
 #include <iomanip>
+#include <string.h> // for memcpy
+#include "pngReadWrite.h"
 
 using namespace std;
 
-int sWidth;
-int sHeight;
-int dWidth;
-int dHeight;
 double diffL;
 double diffa;
 double diffb;
@@ -35,107 +29,13 @@ png_bytep **srcPtr = &rowPointersSrc;
 png_bytep **newPtr = &rowPointersNew;
 png_bytep **dstPtr = &rowPointersDst;
 
-void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* height ) {
-	png_byte bit_depth;
-	png_byte color_type;
-	FILE *fp = fopen( filename, "rb" );
+uint64_t x = 0x8E588AFE51D8B00D;
 
-	png_structp png = png_create_read_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
-	if( !png ) {
-		abort();
-	}
-
-	png_infop info = png_create_info_struct( png );
-	if( !info ) {
-		abort();
-	}
-
-	if( setjmp( png_jmpbuf( png ) ) ) {
-		abort();
-	}
-
-	png_init_io( png, fp );
-
-	png_read_info( png, info );
-
-	*width = png_get_image_width( png, info );
-	*height = png_get_image_height( png, info );
-	color_type = png_get_color_type( png, info );
-	bit_depth = png_get_bit_depth( png, info );
-
-	if( bit_depth == 16 ) {
-		png_set_strip_16( png );
-	}
-
-	if( color_type == PNG_COLOR_TYPE_PALETTE ) {
-		png_set_palette_to_rgb( png );
-	}
-
-	if( color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8 ) {
-		png_set_expand_gray_1_2_4_to_8( png );
-	}
-
-	if( png_get_valid( png, info, PNG_INFO_tRNS ) ) {
-		png_set_tRNS_to_alpha( png );
-	}
-
-	if( color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_PALETTE ) {
-		png_set_filler( png, 0xFF, PNG_FILLER_AFTER );
-	}
-
-	if( color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA ) {
-		png_set_gray_to_rgb( png );
-	}
-
-	png_read_update_info( png, info );
-
-	rowPointers = (png_bytep*) realloc( rowPointers, sizeof( png_bytep ) * *height );
-	for( int y = 0; y < *height; y++ ) {
-		rowPointers[y] = (png_byte*) malloc( png_get_rowbytes( png, info ) );
-	}
-
-	png_read_image( png, rowPointers );
-
-	fclose( fp );
-}
-
-void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = false ) {
-	FILE *fp = fopen( filename, "wb" );
-	if( !fp ) {
-		abort();
-	}
-
-	png_structp png = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
-	if( !png ) {
-		abort();
-	}
-
-	png_infop info = png_create_info_struct(png);
-	if( !info ) {
-		abort();
-	}
-
-	if( setjmp( png_jmpbuf( png ) ) ) {
-		abort();
-	}
-
-	png_init_io( png, fp );
-
-	png_set_IHDR( png, info, dWidth, dHeight, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
-
-	png_write_info( png, info );
-
-	png_write_image( png, rowPointers );
-	png_write_end( png, NULL );
-
-	if( done ) {
-		for( int y = 0; y < dHeight; y++ ) {
-			free( rowPointers[y] );
-		}
-		free( rowPointers );
-	}
-
-	fclose(fp);
+inline uint64_t xorshift64star() {
+	x ^= x >> 12;
+	x ^= x << 25;
+	x ^= x >> 27;
+	return x * 2685821657736338717ULL;
 }
 
 inline Color RGBToXYZ( png_bytep px ) {
@@ -293,15 +193,21 @@ void processPNGFile( Color** src, Color** dst ) {
 			string s2(ss.str());
 			string newFilename = filePrefix + s2 + ".png";
 			labToImage( src, *newPtr );
-			//writePNGFile( newFilename.c_str(), *newPtr );
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 
 		for( int j = 0; j < randomLoopCount; j++ ) {
 			for( int i = 0; i < j*1e5; i++ ) {
-				y1 = (rand() % (int)(dHeight));
-				y2 = (rand() % (int)(dHeight));
-				x1 = (rand() % (int)(dWidth));
-				x2 = (rand() % (int)(dWidth));
+				uint64_t r = xorshift64star();
+				int r1 = r & 0xFFFF;
+				int r2 = (r & (0xFFFFULL << 16)) >> 16;
+				int r3 = (r & (0xFFFFULL << 32)) >> 32;
+				int r4 = (r & (0xFFFFULL << 48)) >> 48;
+
+				y1 = r1 % dHeight;
+				y2 = r2 % dHeight;
+				x1 = r3 % dWidth;
+				x2 = r4 % dWidth;
 
 				sy1 = src[y1];
 				sy2 = src[y2];
@@ -323,7 +229,7 @@ void processPNGFile( Color** src, Color** dst ) {
 			string s2(ss.str());
 			string newFilename = filePrefix + s2 + ".png";
 			labToImage( src, *newPtr );
-			//writePNGFile( newFilename.c_str(), *newPtr );
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 	}
 }
@@ -343,14 +249,11 @@ int main( int argc, char *argv[] ) {
 	// Output shape should be that of the dst image.
 	rowPointersNew = (png_bytep*) realloc( rowPointersNew, sizeof( png_bytep ) * dHeight );
 	for( int y = 0; y < dHeight; y++ ) {
-		rowPointersNew[y] = (png_byte*) malloc( sizeof( png_bytep ) * dWidth * 4 );
+		rowPointersNew[y] = (png_bytep) malloc( sizeof( png_bytep ) * dWidth * 4 );
 	}
 
 	for( int i = 0; i < dHeight * dWidth; i++ ) {
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+0] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+0];
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+1] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+1];
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+2] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+2];
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+3] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+3];
+		memcpy( &rowPointersNew[i / dWidth][((i % dWidth)*4)], &rowPointersSrc[i / sWidth][((i % sWidth)*4)], 4 );
 	}
 
 	Color** srcLab = imageToLab( *newPtr );
@@ -360,12 +263,12 @@ int main( int argc, char *argv[] ) {
 	ss << argv[3];
 	filePrefix = ss.str();
 	filePrefix = "out" + split( filePrefix );
-	//writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
+	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
 
 	processPNGFile( srcLab, dstLab );
 	
 	labToImage( srcLab, *newPtr );
-	//writePNGFile( argv[3], *newPtr, true );
+	writePNGFile( argv[3], *newPtr, true );
 	
 	return 0;
 }

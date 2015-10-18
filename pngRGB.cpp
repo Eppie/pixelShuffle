@@ -1,12 +1,9 @@
-#include <stdlib.h>
-#include <time.h>
-#include <iostream>
-#include <cmath>
+#include <iostream> // for cout
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <string.h> // for memcpy
 #include "pngReadWrite.h"
-#include <stdint.h>
 
 using namespace std;
 
@@ -23,13 +20,13 @@ png_bytep **srcPtr = &rowPointersSrc;
 png_bytep **newPtr = &rowPointersNew;
 png_bytep **dstPtr = &rowPointersDst;
 
-/* The current state of the generator. */
-__int128_t x = 0xC9816259DD73999F;
-uint64_t s[ 2 ] = { 0xB3F3457E5F2CA02B, 0x8E588AFE51D8B00D };
+uint64_t x = 0x8E588AFE51D8B00D;
 
-inline uint64_t mcg128() {
-|       x *= ( (__int128_t)0x12E15E35B500F16EULL << 64 | (__int128_t)0x2E714EB2B37916A5ULL );
-|       return s[ 1 ];
+inline uint64_t xorshift64star() {
+	x ^= x >> 12;
+	x ^= x << 25;
+	x ^= x >> 27;
+	return x * 2685821657736338717ULL;
 }
 
 inline int pixelDiff( png_bytep px1, png_bytep px2 ) {
@@ -85,10 +82,8 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 	png_bytep dPx2;
 
 	unsigned long long t;
-	int orderedLoopCount = 0;
+	int orderedLoopCount = 150;
 	int randomLoopCount = 100;
-
-	//srand( time( NULL ) );
 
 	for( int l = 0; l < 1; l++ ) {
 		for( int j = 0; j < orderedLoopCount; j++ ) {
@@ -110,24 +105,25 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			}
 			t = totalDiff( src, dst );
 			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) << ", Diff: " << t << " (ordered)" << endl;
-			//ostringstream ss;
-			//ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l );
-			//string s2(ss.str());
-			//string newFilename = filePrefix + s2 + ".png";
-			//writePNGFile( newFilename.c_str(), *newPtr );
+			ostringstream ss;
+			ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l );
+			string s2(ss.str());
+			string newFilename = filePrefix + s2 + ".png";
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 
 		for( int j = 0; j < randomLoopCount; j++ ) {
 			for( int i = 0; i < j*1e5; i++ ) {
-				//y1 = (rand() % (int)(dHeight));
-				//y2 = (rand() % (int)(dHeight));
-				//x1 = (rand() % (int)(dWidth));
-				//x2 = (rand() % (int)(dWidth));
+				uint64_t r = xorshift64star();
+				int r1 = r & 0xFFFF;
+				int r2 = (r & (0xFFFFULL << 16)) >> 16;
+				int r3 = (r & (0xFFFFULL << 32)) >> 32;
+				int r4 = (r & (0xFFFFULL << 48)) >> 48;
 
-				y1 = (mcg128() % (int)(dHeight));
-				y2 = (mcg128() % (int)(dHeight));
-				x1 = (mcg128() % (int)(dWidth));
-				x2 = (mcg128() % (int)(dWidth));
+				y1 = r1 % dHeight;
+				y2 = r2 % dHeight;
+				x1 = r3 % dWidth;
+				x2 = r4 % dWidth;
 
 				sy1 = src[y1];
 				sy2 = src[y2];
@@ -144,22 +140,22 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 			}
 			t = totalDiff( src, dst );
 			cout << "Iteration #" << j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount << ", Diff: " << t << " (random)" << endl;
-			//ostringstream ss;
-			//ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount;
-			//string s2(ss.str());
-			//string newFilename = filePrefix + s2 + ".png";
-			//writePNGFile( newFilename.c_str(), *newPtr );
+			ostringstream ss;
+			ss << setw(5) << setfill('0') << 24 + j + ( ( orderedLoopCount + randomLoopCount ) * l ) + orderedLoopCount;
+			string s2(ss.str());
+			string newFilename = filePrefix + s2 + ".png";
+			writePNGFile( newFilename.c_str(), *newPtr );
 		}
 	}
 }
 
-//string split( string &s ) {
-	//stringstream ss( s );
-	//string result;
-	//getline( ss, result, '/' );
-	//getline( ss, result, '.' );
-	//return result;
-//}
+string split( string &s ) {
+	stringstream ss( s );
+	string result;
+	getline( ss, result, '/' );
+	getline( ss, result, '.' );
+	return result;
+}
 
 int main( int argc, char *argv[] ) {
 
@@ -173,17 +169,14 @@ int main( int argc, char *argv[] ) {
 	}
 
 	for( int i = 0; i < dHeight * dWidth; i++ ) {
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+0] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+0];
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+1] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+1];
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+2] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+2];
-		rowPointersNew[i / dWidth][((i % dWidth)*4)+3] = rowPointersSrc[i / sWidth][((i % sWidth)*4)+3];
+		memcpy( &rowPointersNew[i / dWidth][((i % dWidth)*4)], &rowPointersSrc[i / sWidth][((i % sWidth)*4)], 4 );
 	}
 
-	//ostringstream ss;
-	//ss << argv[3];
-	//filePrefix = ss.str();
-	//filePrefix = "out" + split( filePrefix );
-	//writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
+	ostringstream ss;
+	ss << argv[3];
+	filePrefix = ss.str();
+	filePrefix = "out" + split( filePrefix );
+	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
 	
 	processPNGFile( *newPtr, *dstPtr );
 	writePNGFile( argv[3], *newPtr, true );

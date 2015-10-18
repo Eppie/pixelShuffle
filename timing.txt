@@ -1,6 +1,7 @@
-RGB   xorshift128plus   24m16.580s   75,965,256,475
-RGB   xorshift64star    24m1.796s    74,480,108,032
-RGB   rand              77m39.747s   149,653,265,375
+RGB   xorshift128plus       24m16.580s   75,965,256,475
+RGB   xorshift64star        24m1.796s    74,480,108,032
+RGB   rand                  77m39.747s   149,653,265,375
+RGB   xorshift64starshift   22m18.461s   62,105,472,342
 
 ////////////////////////////////////////////////////////////////
 
