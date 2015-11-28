@@ -37,10 +37,13 @@ function processArray {
 
 small=(balls gothic mona scream starry stream)
 big=(b2w gothicBig monaBig starryBig rgbGradient1)
+huge=(monaHuge gothicHuge starryHuge)
 gradient1=(b2w w2b)
 gradient2=(rgbGradient1 rgbGradient2)
 
 processArray small[@]
 processArray big[@]
+processArray huge[@]
 processArray gradient1[@]
 processArray gradient2[@]
+

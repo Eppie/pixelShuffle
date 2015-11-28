@@ -1,5 +1,7 @@
 assembly=-masm=intel -fverbose-asm -Wa,-ahldnc
 
+all: rgb lab
+
 rgb:
 	g++ -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngRGB.cpp -o pngRGB $(assembly) > pngRGB.s
 
