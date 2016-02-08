@@ -14,11 +14,11 @@ function generateImage {
 
 	time png2yuv -I p -f 24 -b 0 -n 300 -j out${outFileName}%05d.png > $outFileName.yuv
 
-	time vpxenc -v $outFileName.yuv -o LAB/$outFileName.webm --codec=vp8 --passes=2 --threads=6 --best --target-bitrate=10000 --end-usage=vbr --auto-alt-ref=1 --minsection-pct=5 --maxsection-pct=800 --lag-in-frames=16 --kf-min-dist=0 --kf-max-dist=360 --token-parts=3 --static-thresh=0 --drop-frame=0 --min-q=0 --max-q=60
+	time vpxenc -v $outFileName.yuv -o LAB/$outFileName.webm --codec=vp8 --passes=2 --threads=12 --target-bitrate=30000 --end-usage=vbr --auto-alt-ref=1 --minsection-pct=5 --maxsection-pct=800 --lag-in-frames=16 --kf-min-dist=0 --kf-max-dist=360 --token-parts=3 --static-thresh=0 --drop-frame=0 --min-q=0 --max-q=30
 
 	time optipng -v -o3 LAB/$outFileName.png
 
-	rm -f out* $outFileName.yuv
+	rm -f out${outFileName}*.png $outFileName.yuv
 }
 
 function processArray {
@@ -35,8 +35,8 @@ function processArray {
 	done
 }
 
-small=(balls gothic mona scream starry stream)
-big=(b2w gothicBig monaBig starryBig rgbGradient1)
+small=(balls dali gothic mona nikolai scream starry stream)
+big=(b2w daliBig gothicBig monaBig nikolaiBig starryBig rgbGradient1)
 huge=(monaHuge gothicHuge starryHuge)
 gradient1=(b2w w2b)
 gradient2=(rgbGradient1 rgbGradient2)

@@ -13,7 +13,7 @@ done
 
 time png2yuv -I p -f 24 -b 0 -n 300 -j out${outFileName}%05d.png > $outFileName.yuv
 
-time vpxenc -v $outFileName.yuv -o LAB/$outFileName.webm --codec=vp8 --passes=2 --threads=6 --best --target-bitrate=10000 --end-usage=vbr --auto-alt-ref=1 --minsection-pct=5 --maxsection-pct=800 --lag-in-frames=16 --kf-min-dist=0 --kf-max-dist=360 --token-parts=2 --static-thresh=0 --drop-frame=0 --min-q=0 --max-q=60
+time vpxenc -v $outFileName.yuv -o LAB/$outFileName.webm --codec=vp8 --passes=2 --threads=12 --target-bitrate=30000 --end-usage=vbr --auto-alt-ref=1 --minsection-pct=5 --maxsection-pct=800 --lag-in-frames=16 --kf-min-dist=0 --kf-max-dist=360 --token-parts=2 --static-thresh=0 --drop-frame=0 --min-q=0 --max-q=30
 
 time optipng -v -o3 LAB/$outFileName.png
 
