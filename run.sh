@@ -17,7 +17,7 @@ time vpxenc -v $outFileName.yuv -o LAB/$outFileName.webm --codec=vp8 --passes=2 
 
 time optipng -v -o3 LAB/$outFileName.png
 
-rm -f out* $outFileName.yuv
+rm -f out${outFileName}*.png $outFileName.yuv
 
 xdg-open LAB/$1TO$2.webm
 

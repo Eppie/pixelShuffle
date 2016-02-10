@@ -3,10 +3,10 @@ assembly=-masm=intel -fverbose-asm -Wa,-ahldnc
 all: rgb lab
 
 rgb:
-	g++ -fno-stack-protector -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngRGB.cpp -o pngRGB $(assembly) > pngRGB.s
+	g++ -DOUTPUT -DANIMATION -fno-stack-protector -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngRGB.cpp -o pngRGB $(assembly) > pngRGB.s
 
 lab:
-	g++ -fno-stack-protector -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngLAB.cpp -o pngLAB $(assembly) > pngLAB.s
+	g++ -DOUTPUT -DANIMATION -fno-stack-protector -march=native -mtune=native -g -std=c++11 -Ofast -lpng pngLAB.cpp -o pngLAB $(assembly) > pngLAB.s
 
 debug:
 	g++ -march=native -mtune=native -g -std=c++11 -O0 -lpng pngLAB.cpp -o pngLAB $(assembly) > pngLAB.s
