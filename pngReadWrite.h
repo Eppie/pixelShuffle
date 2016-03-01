@@ -80,7 +80,14 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 		abort();
 	}
 
-	png_infop info = png_create_info_struct(png);
+#ifdef ANIMATION
+	// Compression is ~1/3 of the total running time of the program. If we are writing a bunch of files,
+	// disable compression at the expense of ~50% greater file sizes. If we are only writing the result file,
+	// compress as per normal.
+	png_set_compression_level( png, 0 );
+#endif // ANIMATION
+
+	png_infop info = png_create_info_struct( png );
 	if( !info ) {
 		abort();
 	}
@@ -106,5 +113,7 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 	}
 
 	fclose(fp);
+	png_destroy_write_struct( &png, ( png_infopp ) NULL );
+	png_free_data( png, info, PNG_FREE_ALL, -1 );
 }
 
