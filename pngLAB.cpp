@@ -1,8 +1,6 @@
 #include <iostream>
-#include <cmath>
 #include <sstream>
 #include <iomanip>
-#include <locale>
 #include <string.h> // for memcpy
 #include "pngReadWrite.h"
 #include "fmath.hpp"
