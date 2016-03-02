@@ -6,7 +6,16 @@ from PIL import Image
 def check(palette, copy):
     palette = sorted(Image.open(palette).convert('RGB').getdata())
     copy = sorted(Image.open(copy).convert('RGB').getdata())
-    print 'Success' if copy == palette else 'Failed'
+    if len(palette) != len(copy):
+        return 'Images aren\'t the same size!'
+    bad = 0
+    for i in range(len(palette)):
+        if copy[i] != palette[i]:
+            bad += 1
+    print 'Bad: {}/{}'.format(bad, len(palette))
+    if bad:
+        return 'Failed'
+    return 'Success'
 
-check('palette.png', 'copy.png')
+print check('palette.png', 'copy.png')
 
