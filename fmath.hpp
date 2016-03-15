@@ -12,10 +12,6 @@
 #include <math.h>
 #include <x86intrin.h>
 
-namespace fmath {
-
-namespace local {
-
 union fi {
 	float f;
 	unsigned int i;
@@ -24,8 +20,6 @@ union fi {
 inline unsigned int mask( const int x ) {
 	return ( 1U << x ) - 1;
 }
-
-} // fmath::local
 
 /*
 	for given y > 0
@@ -59,7 +53,6 @@ public:
 		}
 	}
 	float get( float x ) const {
-		using namespace local;
 		fi fi;
 		fi.f = x;
 		int a = ( fi.i >> 23 ) & mask( 8 );
@@ -73,4 +66,3 @@ public:
 	}
 };
 
-} // fmath

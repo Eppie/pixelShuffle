@@ -112,7 +112,7 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 		free( rowPointers );
 	}
 
-	fclose(fp);
+	fclose( fp );
 	png_destroy_write_struct( &png, ( png_infopp ) NULL );
 	png_free_data( png, info, PNG_FREE_ALL, -1 );
 }

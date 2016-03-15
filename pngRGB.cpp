@@ -119,7 +119,6 @@ void processPNGFile( png_bytep *src, png_bytep *dst ) {
 				int r2 = (r & (0xFFFFULL << 16)) >> 16;
 				int r3 = (r & (0xFFFFULL << 32)) >> 32;
 				int r4 = (r & (0xFFFFULL << 48)) >> 48;
-				//cout << hex << r4 << r3 << r2 << r1 << endl;
 
 				y1 = r1 % dHeight;
 				y2 = r2 % dHeight;

@@ -36,7 +36,7 @@ inline uint64_t xorshift64star() {
 }
 
 inline Color XYZToRGB( Color px ) {
-	static fmath::PowGenerator f( 1.0 / 2.4 );
+	static PowGenerator f( 1.0 / 2.4 );
 
 	float X = px.A / 100.0;
 	float Y = px.B / 100.0;
@@ -59,7 +59,7 @@ inline Color XYZToRGB( Color px ) {
 }
 
 inline Color RGBToXYZ( png_bytep px ) {
-	static fmath::PowGenerator f( 2.4 );
+	static PowGenerator f( 2.4 );
 	float R = px[0] / 255.0;
 	float G = px[1] / 255.0;
 	float B = px[2] / 255.0;
@@ -81,7 +81,7 @@ inline Color RGBToXYZ( png_bytep px ) {
 }
 
 inline Color XYZToLab( Color px ) {
-	static fmath::PowGenerator f( 1.0 / 3.0 );
+	static PowGenerator f( 1.0 / 3.0 );
 	float X = px.A / 95.047;
 	float Y = px.B / 100.0;
 	float Z = px.C / 108.883;
