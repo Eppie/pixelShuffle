@@ -5,17 +5,19 @@ int sHeight;
 int dWidth;
 int dHeight;
 
-void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* height ) {
+void readPNGFile( char* filename, png_bytep* rowPointers, int* width, int* height ) {
 	png_byte bit_depth;
 	png_byte color_type;
-	FILE *fp = fopen( filename, "rb" );
+	FILE* fp = fopen( filename, "rb" );
 
 	png_structp png = png_create_read_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
+
 	if( !png ) {
 		abort();
 	}
 
 	png_infop info = png_create_info_struct( png );
+
 	if( !info ) {
 		abort();
 	}
@@ -59,9 +61,10 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 
 	png_read_update_info( png, info );
 
-	rowPointers = (png_bytep*) realloc( rowPointers, sizeof( png_bytep ) * *height );
+	rowPointers = ( png_bytep* ) realloc( rowPointers, sizeof( png_bytep ) * *height );
+
 	for( int y = 0; y < *height; y++ ) {
-		rowPointers[y] = (png_byte*) malloc( png_get_rowbytes( png, info ) );
+		rowPointers[y] = ( png_byte* ) malloc( png_get_rowbytes( png, info ) );
 	}
 
 	png_read_image( png, rowPointers );
@@ -69,13 +72,15 @@ void readPNGFile( char *filename, png_bytep *rowPointers, int* width, int* heigh
 	fclose( fp );
 }
 
-void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = false ) {
-	FILE *fp = fopen( filename, "wb" );
+void writePNGFile( const char* filename, png_bytep* rowPointers, bool done = false ) {
+	FILE* fp = fopen( filename, "wb" );
+
 	if( !fp ) {
 		abort();
 	}
 
 	png_structp png = png_create_write_struct( PNG_LIBPNG_VER_STRING, NULL, NULL, NULL );
+
 	if( !png ) {
 		abort();
 	}
@@ -88,6 +93,7 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 #endif // ANIMATION
 
 	png_infop info = png_create_info_struct( png );
+
 	if( !info ) {
 		abort();
 	}
@@ -109,6 +115,7 @@ void writePNGFile( const char *filename, png_bytep *rowPointers, bool done = fal
 		for( int y = 0; y < dHeight; y++ ) {
 			free( rowPointers[y] );
 		}
+
 		free( rowPointers );
 	}
 
