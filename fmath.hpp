@@ -12,6 +12,10 @@
 #include <math.h>
 #include <x86intrin.h>
 
+#ifdef ENABLE_PROFILING
+#include "profiler.h"
+#endif
+
 union fi {
 	float f;
 	unsigned int i;
@@ -36,6 +40,9 @@ class PowGenerator {
 	} tbl1_[1 << N];
 public:
 	PowGenerator( float y ) {
+#ifdef ENABLE_PROFILING
+		Profiling::Profiler profiler_pow_constructor("PowGenerator::PowGenerator");
+#endif
 		for( int i = 0; i < 256; i++ ) {
 			tbl0_[i] = ::powf( 2, ( i - 127 ) * y );
 		}
@@ -53,6 +60,7 @@ public:
 		}
 	}
 	float get( float x ) const {
+		PROFILE_FUNCTION();
 		fi fi;
 		fi.f = x;
 		int a = ( fi.i >> 23 ) & mask( 8 );

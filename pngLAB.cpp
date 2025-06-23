@@ -4,6 +4,7 @@
 #include <string.h> // for memcpy
 #include "pngReadWrite.h"
 #include "fmath.hpp"
+#include "profiler.h" // Added for profiling
 
 using namespace std;
 
@@ -29,6 +30,7 @@ png_bytep** dstPtr = &rowPointersDst;
 uint64_t x = 0x8E588AFE51D8B00D;
 
 inline uint64_t xorshift64star() {
+	PROFILE_FUNCTION();
 	x ^= x >> 12;
 	x ^= x << 25;
 	x ^= x >> 27;
@@ -36,6 +38,7 @@ inline uint64_t xorshift64star() {
 }
 
 inline Color XYZToRGB( Color px ) {
+	PROFILE_FUNCTION();
 	static PowGenerator f( 1.0 / 2.4 );
 
 	float X = px.A / 100.0;
@@ -59,6 +62,7 @@ inline Color XYZToRGB( Color px ) {
 }
 
 inline Color RGBToXYZ( png_bytep px ) {
+	PROFILE_FUNCTION();
 	static PowGenerator f( 2.4 );
 	float R = px[0] / 255.0;
 	float G = px[1] / 255.0;
@@ -81,6 +85,7 @@ inline Color RGBToXYZ( png_bytep px ) {
 }
 
 inline Color XYZToLab( Color px ) {
+	PROFILE_FUNCTION();
 	static PowGenerator f( 1.0 / 3.0 );
 	float X = px.A / 95.047;
 	float Y = px.B / 100.0;
@@ -99,6 +104,7 @@ inline Color XYZToLab( Color px ) {
 }
 
 inline Color LabToXYZ( Color px ) {
+	PROFILE_FUNCTION();
 	float Y = ( px.A + 16.0 ) / 116.0;
 	float X = px.B / 500.0 + Y;
 	float Z = Y - px.C / 200.0;
@@ -116,10 +122,12 @@ inline Color LabToXYZ( Color px ) {
 }
 
 inline Color RGBToLab( png_bytep px ) {
+	PROFILE_FUNCTION();
 	return XYZToLab( RGBToXYZ( px ) );
 }
 
 inline float pixelDiff( Color* px1, Color* px2 ) {
+	PROFILE_FUNCTION();
 	diffL = px1->A - px2->A;
 	diffa = px1->B - px2->B;
 	diffb = px1->C - px2->C;
@@ -127,12 +135,14 @@ inline float pixelDiff( Color* px1, Color* px2 ) {
 }
 
 inline void swapPixels( Color* px1, Color* px2 ) {
+	PROFILE_FUNCTION();
 	swap( px1->A, px2->A );
 	swap( px1->B, px2->B );
 	swap( px1->C, px2->C );
 }
 
 inline Color** imageToLab( png_bytep* image ) {
+	PROFILE_FUNCTION();
 	Color lab;
 	png_bytep oldRow;
 	Color* newRow;
@@ -155,6 +165,7 @@ inline Color** imageToLab( png_bytep* image ) {
 }
 
 inline void labToImage( Color** lab, png_bytep* image ) {
+	PROFILE_FUNCTION();
 	png_bytep newRow;
 	Color* oldRow;
 	Color RGB;
@@ -179,6 +190,7 @@ inline void labToImage( Color** lab, png_bytep* image ) {
 }
 
 float totalDiff( Color** src, Color** dst ) {
+	PROFILE_FUNCTION();
 	float totalDiff = 0;
 	Color* rowSrc;
 	Color* rowDst;
@@ -198,6 +210,7 @@ float totalDiff( Color** src, Color** dst ) {
 }
 
 void processPNGFile( Color** src, Color** dst ) {
+	PROFILE_FUNCTION();
 	unsigned long long k;
 
 	int x1, x2, y1, y2;
@@ -301,6 +314,7 @@ void processPNGFile( Color** src, Color** dst ) {
 }
 
 string split( string &s ) {
+	PROFILE_FUNCTION();
 	stringstream ss( s );
 	string result;
 	getline( ss, result, '/' );
@@ -309,6 +323,7 @@ string split( string &s ) {
 }
 
 int main( int argc, char* argv[] ) {
+	PROFILE_FUNCTION();
 	if( argc != 4 ) {
 		cout << "Usage: " << argv[0] << " <palette image> <source image> <output image>"  << endl;
 		exit( 1 );
