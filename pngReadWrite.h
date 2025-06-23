@@ -1,11 +1,16 @@
 #include <png.h>
 
+#ifdef ENABLE_PROFILING
+#include "profiler.h"
+#endif
+
 int sWidth;
 int sHeight;
 int dWidth;
 int dHeight;
 
 void readPNGFile( char* filename, png_bytep* rowPointers, int* width, int* height ) {
+	PROFILE_SCOPE(readPNGFile);
 	png_byte bit_depth;
 	png_byte color_type;
 	FILE* fp = fopen( filename, "rb" );
@@ -73,6 +78,7 @@ void readPNGFile( char* filename, png_bytep* rowPointers, int* width, int* heigh
 }
 
 void writePNGFile( const char* filename, png_bytep* rowPointers, bool done = false ) {
+	PROFILE_SCOPE(writePNGFile);
 	FILE* fp = fopen( filename, "wb" );
 
 	if( !fp ) {
