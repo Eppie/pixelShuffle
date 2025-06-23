@@ -19,13 +19,13 @@ struct Color {
 	float C;
 };
 
-png_bytep* rowPointersSrc = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
-png_bytep* rowPointersNew = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
-png_bytep* rowPointersDst = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
+// png_bytep* rowPointersSrc = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
+// png_bytep* rowPointersNew = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
+// png_bytep* rowPointersDst = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
 
-png_bytep** srcPtr = &rowPointersSrc;
-png_bytep** newPtr = &rowPointersNew;
-png_bytep** dstPtr = &rowPointersDst;
+// png_bytep** srcPtr = &rowPointersSrc;
+// png_bytep** newPtr = &rowPointersNew;
+// png_bytep** dstPtr = &rowPointersDst;
 
 uint64_t x = 0x8E588AFE51D8B00D;
 
@@ -209,7 +209,7 @@ float totalDiff( Color** src, Color** dst ) {
 	return totalDiff;
 }
 
-void processPNGFile( Color** src, Color** dst ) {
+void processPNGFile( Color** src, Color** dst, png_bytep* rowPointersNew ) { // Added rowPointersNew
 	PROFILE_FUNCTION();
 	unsigned long long k;
 
@@ -258,8 +258,8 @@ void processPNGFile( Color** src, Color** dst ) {
 		ss << setw( 5 ) << setfill( '0' ) << 24 + j;
 		string s2( ss.str() );
 		string newFilename = filePrefix + s2 + ".png";
-		labToImage( src, *newPtr );
-		writePNGFile( newFilename.c_str(), *newPtr );
+		labToImage( src, rowPointersNew ); // Use passed rowPointersNew
+		writePNGFile( newFilename.c_str(), rowPointersNew ); // Use passed rowPointersNew
 #endif // ANIMATION
 	}
 
@@ -307,8 +307,8 @@ void processPNGFile( Color** src, Color** dst ) {
 		ss << setw( 5 ) << setfill( '0' ) << 24 + j + orderedLoopCount;
 		string s2( ss.str() );
 		string newFilename = filePrefix + s2 + ".png";
-		labToImage( src, *newPtr );
-		writePNGFile( newFilename.c_str(), *newPtr );
+		labToImage( src, rowPointersNew ); // Use passed rowPointersNew
+		writePNGFile( newFilename.c_str(), rowPointersNew ); // Use passed rowPointersNew
 #endif // ANIMATION
 	}
 }
@@ -329,39 +329,75 @@ int main( int argc, char* argv[] ) {
 		exit( 1 );
 	}
 
-	readPNGFile( argv[1], *srcPtr, &sWidth, &sHeight ); // "palette"
-	readPNGFile( argv[2], *dstPtr, &dWidth, &dHeight ); // "source"
+	png_bytep* rowPointersSrc = nullptr;
+	png_bytep* rowPointersDst = nullptr;
+	png_bytep* rowPointersNew = nullptr;
+
+	readPNGFile( argv[1], &rowPointersSrc, &sWidth, &sHeight ); // Pass address of rowPointersSrc
+	readPNGFile( argv[2], &rowPointersDst, &dWidth, &dHeight ); // Pass address of rowPointersDst
 
 	// Output shape should be that of the dst image.
-	rowPointersNew = ( png_bytep* ) realloc( rowPointersNew, sizeof( png_bytep ) * dHeight );
+	rowPointersNew = ( png_bytep* ) malloc( sizeof( png_bytep ) * dHeight );
 
 	for( int y = 0; y < dHeight; y++ ) {
-		rowPointersNew[y] = ( png_bytep ) malloc( sizeof( png_bytep ) * dWidth * 4 );
+		// Allocate for RGBA, so 4 bytes per pixel
+		rowPointersNew[y] = ( png_bytep ) malloc( sizeof( png_byte ) * dWidth * 4 );
 	}
 
-	for( int i = 0; i < dHeight * dWidth; i++ ) {
-		memcpy( &rowPointersNew[i / dWidth][( ( i % dWidth ) * 4 )], &rowPointersSrc[i / sWidth][( ( i % sWidth ) * 4 )], 4 );
+	// Copy data from src (palette) to new, resizing if necessary
+	// This part assumes the source image (palette) is large enough.
+	// A safer approach would be to tile or clamp if sWidth/sHeight is smaller than dWidth/dHeight.
+	for( int y = 0; y < dHeight; y++ ) {
+		for (int x = 0; x < dWidth; ++x) {
+			int src_y = y % sHeight;
+			int src_x = x % sWidth;
+			memcpy( &rowPointersNew[y][x * 4], &rowPointersSrc[src_y][src_x * 4], 4 );
+		}
 	}
 
 	for( int y = 0; y < sHeight; y++ ) {
 		free( rowPointersSrc[y] );
 	}
-
 	free( rowPointersSrc );
 
-	Color** srcLab = imageToLab( *newPtr );
-	Color** dstLab = imageToLab( *dstPtr );
+	Color** srcLab = imageToLab( rowPointersNew );
+	Color** dstLab = imageToLab( rowPointersDst );
+
 #ifdef ANIMATION
 	ostringstream ss;
 	ss << argv[3];
 	filePrefix = ss.str();
 	filePrefix = "out" + split( filePrefix );
-	writePNGFile( string( filePrefix + "00000.png" ).c_str(), *newPtr );
+	// Pass rowPointersNew directly
+	writePNGFile( string( filePrefix + "00000.png" ).c_str(), rowPointersNew );
 #endif // ANIMATION
-	processPNGFile( srcLab, dstLab );
+	processPNGFile( srcLab, dstLab, rowPointersNew ); // Pass rowPointersNew
 
-	labToImage( srcLab, *newPtr );
-	writePNGFile( argv[3], *newPtr, true );
+	labToImage( srcLab, rowPointersNew );
+	// Pass rowPointersNew directly and mark as done for freeing
+	writePNGFile( argv[3], rowPointersNew, true );
+	// rowPointersNew is freed by writePNGFile when done=true
+
+	// Free dstLab and its rows
+	for( int y = 0; y < dHeight; y++ ) {
+		free( dstLab[y] );
+	}
+	free( dstLab );
+
+	// Free rowPointersDst and its rows
+	for( int y = 0; y < dHeight; y++ ) {
+		free( rowPointersDst[y] );
+	}
+	free( rowPointersDst );
+
+	// srcLab is not directly freed here as its data comes from rowPointersNew,
+	// which is managed by writePNGFile or needs separate freeing if ANIMATION is not defined.
+	// However, the Color** structure itself for srcLab needs freeing.
+	for( int y = 0; y < dHeight; y++ ) {
+		free( srcLab[y] );
+	}
+	free( srcLab );
+
 
 	return 0;
 }

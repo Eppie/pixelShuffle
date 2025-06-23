@@ -9,7 +9,7 @@ int sHeight;
 int dWidth;
 int dHeight;
 
-void readPNGFile( char* filename, png_bytep* rowPointers, int* width, int* height ) {
+void readPNGFile( char* filename, png_bytep** rowPointers, int* width, int* height ) { // Changed to png_bytep**
 	PROFILE_SCOPE(readPNGFile);
 	png_byte bit_depth;
 	png_byte color_type;
@@ -66,14 +66,18 @@ void readPNGFile( char* filename, png_bytep* rowPointers, int* width, int* heigh
 
 	png_read_update_info( png, info );
 
-	rowPointers = ( png_bytep* ) realloc( rowPointers, sizeof( png_bytep ) * *height );
+    // Allocate memory for the array of row pointers
+	*rowPointers = ( png_bytep* ) malloc( sizeof( png_bytep ) * *height );
 
 	for( int y = 0; y < *height; y++ ) {
-		rowPointers[y] = ( png_byte* ) malloc( png_get_rowbytes( png, info ) );
+        // Allocate memory for each row
+		( *rowPointers )[y] = ( png_byte* ) malloc( png_get_rowbytes( png, info ) );
 	}
 
-	png_read_image( png, rowPointers );
+    // Read the image using the dereferenced rowPointers
+	png_read_image( png, *rowPointers );
 
+	png_destroy_read_struct( &png, &info, NULL );
 	fclose( fp );
 }
 
@@ -126,7 +130,7 @@ void writePNGFile( const char* filename, png_bytep* rowPointers, bool done = fal
 	}
 
 	fclose( fp );
-	png_destroy_write_struct( &png, ( png_infopp ) NULL );
-	png_free_data( png, info, PNG_FREE_ALL, -1 );
+	// png_free_data( png, info, PNG_FREE_ALL, -1 ); // This is problematic after png is destroyed or if info is handled by destroy
+	png_destroy_write_struct( &png, &info ); // Pass &info to free it along with png struct
 }
 
