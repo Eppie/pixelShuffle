@@ -18,18 +18,15 @@ struct Color {
 	float B;
 	float C;
 };
-
-// png_bytep* rowPointersSrc = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
-// png_bytep* rowPointersNew = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
-// png_bytep* rowPointersDst = ( png_bytep* ) malloc( sizeof( png_bytep ) * 5000 );
-
-// png_bytep** srcPtr = &rowPointersSrc;
-// png_bytep** newPtr = &rowPointersNew;
-// png_bytep** dstPtr = &rowPointersDst;
+#if 1
+#define INLINE_OPTIONAL __attribute__((noinline))
+#else
+#define INLINE_OPTIONAL inline
+#endif
 
 uint64_t x = 0x8E588AFE51D8B00D;
 
-inline uint64_t xorshift64star() {
+INLINE_OPTIONAL uint64_t xorshift64star() {
 	PROFILE_FUNCTION();
 	x ^= x >> 12;
 	x ^= x << 25;
@@ -37,7 +34,7 @@ inline uint64_t xorshift64star() {
 	return x * 2685821657736338717ULL;
 }
 
-inline Color XYZToRGB( Color px ) {
+INLINE_OPTIONAL Color XYZToRGB( Color px ) {
 	PROFILE_FUNCTION();
 	static PowGenerator f( 1.0 / 2.4 );
 
@@ -61,7 +58,7 @@ inline Color XYZToRGB( Color px ) {
 	return result;
 }
 
-inline Color RGBToXYZ( png_bytep px ) {
+INLINE_OPTIONAL Color RGBToXYZ( png_bytep px ) {
 	PROFILE_FUNCTION();
 	static PowGenerator f( 2.4 );
 	float R = px[0] / 255.0;
@@ -84,7 +81,7 @@ inline Color RGBToXYZ( png_bytep px ) {
 	return result;
 }
 
-inline Color XYZToLab( Color px ) {
+INLINE_OPTIONAL Color XYZToLab( Color px ) {
 	PROFILE_FUNCTION();
 	static PowGenerator f( 1.0 / 3.0 );
 	float X = px.A / 95.047;
@@ -103,7 +100,7 @@ inline Color XYZToLab( Color px ) {
 	return result;
 }
 
-inline Color LabToXYZ( Color px ) {
+INLINE_OPTIONAL Color LabToXYZ( Color px ) {
 	PROFILE_FUNCTION();
 	float Y = ( px.A + 16.0 ) / 116.0;
 	float X = px.B / 500.0 + Y;
@@ -121,12 +118,12 @@ inline Color LabToXYZ( Color px ) {
 	return result;
 }
 
-inline Color RGBToLab( png_bytep px ) {
+INLINE_OPTIONAL Color RGBToLab( png_bytep px ) {
 	PROFILE_FUNCTION();
 	return XYZToLab( RGBToXYZ( px ) );
 }
 
-inline float pixelDiff( Color* px1, Color* px2 ) {
+INLINE_OPTIONAL float pixelDiff( Color* px1, Color* px2 ) {
 	PROFILE_FUNCTION();
 	diffL = px1->A - px2->A;
 	diffa = px1->B - px2->B;
@@ -134,23 +131,26 @@ inline float pixelDiff( Color* px1, Color* px2 ) {
 	return ( diffL * diffL ) + ( diffa * diffa ) + ( diffb * diffb );
 }
 
-inline void swapPixels( Color* px1, Color* px2 ) {
+INLINE_OPTIONAL void swapPixels( Color* px1, Color* px2 ) {
 	PROFILE_FUNCTION();
 	swap( px1->A, px2->A );
 	swap( px1->B, px2->B );
 	swap( px1->C, px2->C );
 }
 
-inline Color** imageToLab( png_bytep* image ) {
+INLINE_OPTIONAL Color** imageToLab( png_bytep* image ) {
 	PROFILE_FUNCTION();
 	Color lab;
 	png_bytep oldRow;
 	Color* newRow;
 	png_bytep px;
-	Color** result = ( Color** ) malloc( sizeof( Color* ) * dHeight );
+	Color** result = static_cast<Color**>(malloc(sizeof(Color*) * dHeight));
+	Color* buffer  = static_cast<Color*>(malloc(sizeof(Color) * dWidth * dHeight)); // flat buffer
+	for (int y = 0; y < dHeight; ++y) {
+	    result[y] = buffer + y * dWidth;  // compute row base
+	}
 
 	for( int y = 0; y < dHeight; y++ ) {
-		result[y] = ( Color* ) malloc( sizeof( Color ) * dWidth );
 		newRow = result[y];
 		oldRow = image[y];
 
@@ -164,7 +164,7 @@ inline Color** imageToLab( png_bytep* image ) {
 	return result;
 }
 
-inline void labToImage( Color** lab, png_bytep* image ) {
+INLINE_OPTIONAL void labToImage( Color** lab, png_bytep* image ) {
 	PROFILE_FUNCTION();
 	png_bytep newRow;
 	Color* oldRow;
@@ -189,7 +189,7 @@ inline void labToImage( Color** lab, png_bytep* image ) {
 	}
 }
 
-float totalDiff( Color** src, Color** dst ) {
+INLINE_OPTIONAL float totalDiff( Color** src, Color** dst ) {
 	PROFILE_FUNCTION();
 	float totalDiff = 0;
 	Color* rowSrc;
@@ -209,7 +209,7 @@ float totalDiff( Color** src, Color** dst ) {
 	return totalDiff;
 }
 
-void processPNGFile( Color** src, Color** dst, png_bytep* rowPointersNew ) { // Added rowPointersNew
+INLINE_OPTIONAL void processPNGFile( Color** src, Color** dst, png_bytep* rowPointersNew ) { // Added rowPointersNew
 	PROFILE_FUNCTION();
 	unsigned long long k;
 
@@ -313,7 +313,7 @@ void processPNGFile( Color** src, Color** dst, png_bytep* rowPointersNew ) { // 
 	}
 }
 
-string split( string &s ) {
+INLINE_OPTIONAL string split( string &s ) {
 	PROFILE_FUNCTION();
 	stringstream ss( s );
 	string result;
@@ -336,12 +336,12 @@ int main( int argc, char* argv[] ) {
 	readPNGFile( argv[1], &rowPointersSrc, &sWidth, &sHeight ); // Pass address of rowPointersSrc
 	readPNGFile( argv[2], &rowPointersDst, &dWidth, &dHeight ); // Pass address of rowPointersDst
 
-	// Output shape should be that of the dst image.
-	rowPointersNew = ( png_bytep* ) malloc( sizeof( png_bytep ) * dHeight );
-
-	for( int y = 0; y < dHeight; y++ ) {
-		// Allocate for RGBA, so 4 bytes per pixel
-		rowPointersNew[y] = ( png_bytep ) malloc( sizeof( png_byte ) * dWidth * 4 );
+	// --- Flat 1‑D buffer allocation (one malloc) ---
+	const size_t stride = static_cast<size_t>(dWidth) * 4;        // bytes per row (RGBA)
+	png_bytep rowBuffer = static_cast<png_bytep>(malloc(stride * dHeight));
+	rowPointersNew = static_cast<png_bytep*>(malloc(sizeof(png_bytep) * dHeight));
+	for (int y = 0; y < dHeight; ++y) {
+	    rowPointersNew[y] = rowBuffer + y * stride;               // compute row base on‑the‑fly
 	}
 
 	// Copy data from src (palette) to new, resizing if necessary
@@ -374,15 +374,12 @@ int main( int argc, char* argv[] ) {
 	processPNGFile( srcLab, dstLab, rowPointersNew ); // Pass rowPointersNew
 
 	labToImage( srcLab, rowPointersNew );
-	// Pass rowPointersNew directly and mark as done for freeing
-	writePNGFile( argv[3], rowPointersNew, true );
-	// rowPointersNew is freed by writePNGFile when done=true
+	// rowPointersNew is *not* freed by writePNGFile; we free it ourselves below.
+	writePNGFile( argv[3], rowPointersNew, false );
 
-	// Free dstLab and its rows
-	for( int y = 0; y < dHeight; y++ ) {
-		free( dstLab[y] );
-	}
-	free( dstLab );
+	// Free dstLab flat buffer and row table
+	free(dstLab[0]);   // buffer
+	free(dstLab);      // row pointers
 
 	// Free rowPointersDst and its rows
 	for( int y = 0; y < dHeight; y++ ) {
@@ -390,14 +387,13 @@ int main( int argc, char* argv[] ) {
 	}
 	free( rowPointersDst );
 
-	// srcLab is not directly freed here as its data comes from rowPointersNew,
-	// which is managed by writePNGFile or needs separate freeing if ANIMATION is not defined.
-	// However, the Color** structure itself for srcLab needs freeing.
-	for( int y = 0; y < dHeight; y++ ) {
-		free( srcLab[y] );
-	}
-	free( srcLab );
+	// Free the flat buffer and its pointer table
+	free(rowBuffer);
+	free(rowPointersNew);
 
+	// Free srcLab flat buffer and row table
+	free(srcLab[0]);   // buffer
+	free(srcLab);
 
 	return 0;
 }

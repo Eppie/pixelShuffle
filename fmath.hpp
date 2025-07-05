@@ -10,11 +10,8 @@
 	g++ -O3 -fomit-frame-pointer -fno-operator-names -march=core2 -mssse3 -mfpmath=sse -ffast-math -fexcess-precision=fast
 */
 #include <math.h>
-#include <x86intrin.h>
 
-#ifdef ENABLE_PROFILING
 #include "profiler.h"
-#endif
 
 union fi {
 	float f;

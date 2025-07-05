@@ -1,8 +1,7 @@
+#pragma once
 #include <png.h>
 
-#ifdef ENABLE_PROFILING
 #include "profiler.h"
-#endif
 
 int sWidth;
 int sHeight;

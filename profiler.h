@@ -7,8 +7,8 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include <algorithm> // For std::find_if
-#include <iomanip>   // For std::fixed and std::setprecision
+#include <algorithm>
+#include <iomanip>
 
 namespace Profiling {
 
@@ -22,7 +22,7 @@ struct FunctionProfile {
 
 // Global vector to store profiling data
 static std::vector<FunctionProfile> global_profile_data;
-// Mutex for thread safety, though current code is single-threaded
+// Mutex for thread safety
 // #include <mutex>
 // static std::mutex profile_mutex;
 
