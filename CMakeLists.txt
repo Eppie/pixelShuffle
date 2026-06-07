@@ -18,6 +18,12 @@ if(ENABLE_PROFILING)
 endif()
 
 option(ENABLE_NEON_SWAP_KERNEL "Enable the NEON-accelerated pngLAB swap kernel on ARM64" ON)
+option(ENABLE_CPU_COUNTERS "Enable Apple PMU cpu_counter instrumentation from CPU_COUNTER_DIR" OFF)
+set(CPU_COUNTER_DIR "/Users/eppie/codex_projects/cpu_counter" CACHE PATH "Path to the cpu_counter project containing perf.h")
+
+if(ENABLE_CPU_COUNTERS AND NOT EXISTS "${CPU_COUNTER_DIR}/perf.h")
+    message(FATAL_ERROR "ENABLE_CPU_COUNTERS requires perf.h at CPU_COUNTER_DIR=${CPU_COUNTER_DIR}")
+endif()
 
 # ---------------------------------------------------------------------------
 #  Dependencies
@@ -51,6 +57,10 @@ function(add_pixelshuffle_exe target src optim_flags extra_defs extra_libs)
         ${optim_flags}        # -Ofast, -O3, or -O0
     )
     target_compile_definitions(${target} PRIVATE ${extra_defs})
+    if(ENABLE_CPU_COUNTERS)
+        target_compile_definitions(${target} PRIVATE ENABLE_CPU_COUNTERS)
+        target_include_directories(${target} PRIVATE "${CPU_COUNTER_DIR}")
+    endif()
     target_link_libraries(${target} PRIVATE PNG::PNG ${extra_libs})
 endfunction()
 
@@ -84,14 +94,14 @@ add_pixelshuffle_exe(pngLAB_bench_core pngLAB.cpp "${OFLAG}" "PROFILE_STATS;${PN
 add_pixelshuffle_exe(pngLAB_bench_e2e pngLAB.cpp "${OFLAG}" "PROFILE_STATS;OUTPUT;ANIMATION;${PNGLAB_ARCH_DEFS}" "")
 add_pixelshuffle_exe(shouldSwap_ab_harness pngLAB.cpp "${OFLAG}" "${PNGLAB_HARNESS_DEFS}" "")
 
-# hungarian uses OpenMP and a slightly different optimisation level
-set(HUNGARIAN_OFLAG "-O3")
-add_pixelshuffle_exe(hungarian hungarian.cpp "${HUNGARIAN_OFLAG}" "" ""
-)
-
 if(OpenMP_CXX_FOUND)
+    # hungarian uses OpenMP and a slightly different optimisation level.
+    set(HUNGARIAN_OFLAG "-O3")
+    add_pixelshuffle_exe(hungarian hungarian.cpp "${HUNGARIAN_OFLAG}" "" "")
     target_link_libraries(hungarian PRIVATE OpenMP::OpenMP_CXX)
     target_compile_options(hungarian PRIVATE -fopenmp)
+else()
+    message(STATUS "OpenMP not found; skipping hungarian target")
 endif()
 
 # ---------------------------------------------------------------------------

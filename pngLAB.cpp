@@ -15,6 +15,7 @@
 #include "fmath.hpp"
 #include "profiler.h"
 #include "profile_stats.h"
+#include "pmu_profile.h"
 
 using namespace std;
 
@@ -363,6 +364,7 @@ HOT_INLINE void swapPixels( Color* px1, Color* px2 ) {
 
 Color* imageToLab( png_bytep* image ) {
 	PROFILE_FUNCTION();
+	PNGLAB_PMU_SCOPE( "image_to_lab" );
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::ImageToLab, static_cast<uint64_t>( dWidth ) * static_cast<uint64_t>( dHeight ) );
 #endif
@@ -382,6 +384,7 @@ Color* imageToLab( png_bytep* image ) {
 
 void labToImage( const Color* lab, png_bytep* image ) {
 	PROFILE_FUNCTION();
+	PNGLAB_PMU_SCOPE( "lab_to_image" );
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::LabToImage, static_cast<uint64_t>( dWidth ) * static_cast<uint64_t>( dHeight ) );
 #endif
@@ -399,6 +402,7 @@ void labToImage( const Color* lab, png_bytep* image ) {
 
 float totalDiff( const Color* src, const Color* dst ) {
 	PROFILE_FUNCTION();
+	PNGLAB_PMU_SCOPE( "total_diff" );
 	const int length = dHeight * dWidth;
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::TotalDiff, static_cast<uint64_t>( length ) );
@@ -442,6 +446,7 @@ void printIterationStatus( int iteration, float diff, int numSwaps, float denomi
 template <bool UseNeon>
 void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png_bytep* rowPointersNew, const KernelTables& tables ) {
 	PROFILE_FUNCTION();
+	PNGLAB_PMU_SCOPE( "process_png_file" );
 
 	const int innerOrderedLoopCount = 300000 * ( dWidth / 320 ) * ( dWidth / 320 );
 
@@ -455,6 +460,7 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 	{
 		ProfileStats::ScopedTimer orderedTimer( ProfileStats::EventId::OrderedLoop, orderedCandidates );
 #endif
+		PNGLAB_PMU_SCOPE( "ordered_loop" );
 		for( int j = 0; j < kOrderedLoopCount; ++j ) {
 			int numSwaps = 0;
 			uint32_t row1 = 0;
@@ -507,6 +513,7 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 	{
 		ProfileStats::ScopedTimer randomTimer( ProfileStats::EventId::RandomLoop, randomCandidates );
 #endif
+		PNGLAB_PMU_SCOPE( "random_loop" );
 		for( int j = 0; j < kRandomLoopCount; ++j ) {
 			int numSwaps = 0;
 			for( int i = 0; i < j * 100000; ++i ) {
@@ -575,6 +582,7 @@ string split( string& s ) {
 }
 
 void seedFromExactPalettePixels( png_bytep* rowPointersDst, png_bytep* rowPointersSrc ) {
+	PNGLAB_PMU_SCOPE( "seed_copy" );
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer seedCopyTimer( ProfileStats::EventId::SeedCopy, static_cast<uint64_t>( dWidth ) * static_cast<uint64_t>( dHeight ) );
 #endif
@@ -833,6 +841,8 @@ int main( int argc, char* argv[] ) {
 		cout << "Usage: " << argv[0] << " <palette image> <source image> <output image>" << endl;
 		exit( 1 );
 	}
+	primePnglabCpuCounters();
+	PNGLAB_PMU_SCOPE( "program_total" );
 
 	png_bytep* rowPointersSrc = nullptr;
 	png_bytep* rowPointersDst = nullptr;

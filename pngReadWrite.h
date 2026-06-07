@@ -3,6 +3,7 @@
 
 #include "profiler.h"
 #include "profile_stats.h"
+#include "pmu_profile.h"
 
 int sWidth;
 int sHeight;
@@ -11,6 +12,7 @@ int dHeight;
 
 void readPNGFile( const char* filename, png_bytep** rowPointers, int* width, int* height ) { // Changed to png_bytep**
 	PROFILE_SCOPE(readPNGFile);
+	PNGLAB_PMU_SCOPE( "read_png" );
 #ifdef PROFILE_STATS
 	const uint64_t startNs = ProfileStats::nowNs();
 #endif
@@ -94,6 +96,7 @@ void readPNGFile( const char* filename, png_bytep** rowPointers, int* width, int
 
 void writePNGFile( const char* filename, png_bytep* rowPointers, int width, int height, bool hasAlpha = true, bool done = false ) {
 	PROFILE_SCOPE(writePNGFile);
+	PNGLAB_PMU_SCOPE( "write_png" );
 #ifdef PROFILE_STATS
 	const uint64_t startNs = ProfileStats::nowNs();
 #endif
