@@ -25,6 +25,8 @@ namespace {
 constexpr int kOrderedLoopCount = 150;
 constexpr int kRandomLoopCount = 100;
 constexpr int kPmuChunkCandidateCount = PNGLAB_PMU_CHUNK_CANDIDATES;
+constexpr int kLocalRandomTileSize = PNGLAB_LOCAL_RANDOM_TILE_SIZE;
+constexpr int kLocalRandomGlobalChunkInterval = PNGLAB_LOCAL_RANDOM_GLOBAL_CHUNK_INTERVAL;
 constexpr uint64_t kNeonWorkingSetLimitBytes = 8ULL * 1024ULL * 1024ULL;
 
 #if defined(PNG_LAB_ENABLE_NEON) && defined(__ARM_NEON)
@@ -32,6 +34,16 @@ constexpr bool kUseNeonSwapKernel = true;
 #else
 constexpr bool kUseNeonSwapKernel = false;
 #endif
+
+#if defined(PNGLAB_RANDOM_MODE_LOCAL)
+constexpr bool kUseLocalRandomChunks = true;
+#else
+constexpr bool kUseLocalRandomChunks = false;
+#endif
+
+static_assert( kPmuChunkCandidateCount > 0, "PNGLAB_PMU_CHUNK_CANDIDATES must be positive" );
+static_assert( kLocalRandomTileSize > 0, "PNGLAB_LOCAL_RANDOM_TILE_SIZE must be positive" );
+static_assert( kLocalRandomGlobalChunkInterval >= 0, "PNGLAB_LOCAL_RANDOM_GLOBAL_CHUNK_INTERVAL must be non-negative" );
 
 #define HOT_INLINE inline __attribute__((always_inline))
 
@@ -427,6 +439,103 @@ HOT_INLINE void advanceOrderedState( const uint32_t* nextTable, const uint32_t* 
 	}
 }
 
+HOT_INLINE uint32_t boundedIndex( const uint32_t value, const uint32_t limit ) {
+	return limit <= 1 ? 0 : value % limit;
+}
+
+HOT_INLINE uint32_t localTileStart( const uint32_t tileIndex, const uint32_t dimension ) {
+	const uint32_t tileSize = static_cast<uint32_t>( kLocalRandomTileSize );
+	if( dimension <= tileSize ) {
+		return 0;
+	}
+	const uint32_t maxStart = dimension - tileSize;
+	const uint32_t start = tileIndex * tileSize;
+	return start < maxStart ? start : maxStart;
+}
+
+template <bool UseNeon>
+HOT_INLINE bool trySwapCandidate( Color* const sPx1, Color* const sPx2, const Color* const dPx1, const Color* const dPx2 ) {
+	if( shouldSwapImpl<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
+		swapPixels( sPx1, sPx2 );
+		return true;
+	}
+	return false;
+}
+
+template <bool UseNeon>
+int runGlobalRandomChunk( const int chunkStart, const int chunkEnd, const KernelTables& tables ) {
+	( void ) chunkStart;
+	PNGLAB_PMU_SCOPE( "random_global_candidate_chunk" );
+	int numSwaps = 0;
+	for( int i = chunkStart; i < chunkEnd; ++i ) {
+		( void ) i;
+		const uint64_t r = xorshift64star();
+		const uint32_t r1 = static_cast<uint32_t>( r & 0xFFFFULL );
+		const uint32_t r2 = static_cast<uint32_t>( ( r >> 16 ) & 0xFFFFULL );
+		const uint32_t r3 = static_cast<uint32_t>( ( r >> 32 ) & 0xFFFFULL );
+		const uint32_t r4 = static_cast<uint32_t>( ( r >> 48 ) & 0xFFFFULL );
+
+		const uint32_t y1 = tables.modHeight[r1];
+		const uint32_t y2 = tables.modHeight[r2];
+		const uint32_t x1 = tables.modWidth[r3];
+		const uint32_t x2 = tables.modWidth[r4];
+
+		Color* const sPx1 = tables.srcRows[y1] + x1;
+		Color* const sPx2 = tables.srcRows[y2] + x2;
+		const Color* const dPx1 = tables.dstRows[y1] + x1;
+		const Color* const dPx2 = tables.dstRows[y2] + x2;
+
+		numSwaps += trySwapCandidate<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ? 1 : 0;
+	}
+	return numSwaps;
+}
+
+template <bool UseNeon>
+int runLocalRandomChunk( const int chunkStart, const int chunkEnd, const KernelTables& tables ) {
+	( void ) chunkStart;
+	PNGLAB_PMU_SCOPE( "random_local_candidate_chunk" );
+	const uint32_t tileSize = static_cast<uint32_t>( kLocalRandomTileSize );
+	const uint32_t height = static_cast<uint32_t>( dHeight );
+	const uint32_t width = static_cast<uint32_t>( dWidth );
+	const uint32_t tileRows = std::max( 1u, ( height + tileSize - 1u ) / tileSize );
+	const uint32_t tileCols = std::max( 1u, ( width + tileSize - 1u ) / tileSize );
+	const uint64_t tileSeed = xorshift64star();
+	const uint32_t tileRow = boundedIndex( static_cast<uint32_t>( tileSeed & 0xFFFFULL ), tileRows );
+	const uint32_t tileCol = boundedIndex( static_cast<uint32_t>( ( tileSeed >> 16 ) & 0xFFFFULL ), tileCols );
+	const uint32_t yStart = localTileStart( tileRow, height );
+	const uint32_t xStart = localTileStart( tileCol, width );
+	const uint32_t tileHeight = std::min( tileSize, height - yStart );
+	const uint32_t tileWidth = std::min( tileSize, width - xStart );
+
+	int numSwaps = 0;
+	for( int i = chunkStart; i < chunkEnd; ++i ) {
+		( void ) i;
+		const uint64_t r = xorshift64star();
+		const uint32_t y1 = yStart + boundedIndex( static_cast<uint32_t>( r & 0xFFFFULL ), tileHeight );
+		const uint32_t y2 = yStart + boundedIndex( static_cast<uint32_t>( ( r >> 16 ) & 0xFFFFULL ), tileHeight );
+		const uint32_t x1 = xStart + boundedIndex( static_cast<uint32_t>( ( r >> 32 ) & 0xFFFFULL ), tileWidth );
+		const uint32_t x2 = xStart + boundedIndex( static_cast<uint32_t>( ( r >> 48 ) & 0xFFFFULL ), tileWidth );
+
+		Color* const sPx1 = tables.srcRows[y1] + x1;
+		Color* const sPx2 = tables.srcRows[y2] + x2;
+		const Color* const dPx1 = tables.dstRows[y1] + x1;
+		const Color* const dPx2 = tables.dstRows[y2] + x2;
+
+		numSwaps += trySwapCandidate<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ? 1 : 0;
+	}
+	return numSwaps;
+}
+
+template <bool UseNeon>
+int runRandomChunk( const int chunkStart, const int chunkEnd, const int randomChunkIndex, const KernelTables& tables ) {
+	const bool useGlobalChunk = !kUseLocalRandomChunks
+		|| ( kLocalRandomGlobalChunkInterval > 0 && ( randomChunkIndex % kLocalRandomGlobalChunkInterval ) == 0 );
+	if( useGlobalChunk ) {
+		return runGlobalRandomChunk<UseNeon>( chunkStart, chunkEnd, tables );
+	}
+	return runLocalRandomChunk<UseNeon>( chunkStart, chunkEnd, tables );
+}
+
 void printIterationStatus( int iteration, float diff, int numSwaps, float denominator, const char* phase ) {
 #ifdef OUTPUT
 	ostringstream out;
@@ -489,8 +598,7 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 					const Color* const dPx1 = dRow1 + col1;
 					const Color* const dPx2 = dRow2 + col2;
 
-					if( shouldSwapImpl<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
-						swapPixels( sPx1, sPx2 );
+					if( trySwapCandidate<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
 						++numSwaps;
 					}
 
@@ -525,36 +633,11 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 			PNGLAB_PMU_SCOPE( "random_iteration" );
 			int numSwaps = 0;
 			const int randomLoopCount = j * 100000;
+			int randomChunkIndex = 0;
 			for( int chunkStart = 0; chunkStart < randomLoopCount; chunkStart += kPmuChunkCandidateCount ) {
-				PNGLAB_PMU_SCOPE( "random_candidate_chunk" );
 				const int chunkEnd = std::min( chunkStart + kPmuChunkCandidateCount, randomLoopCount );
-				for( int i = chunkStart; i < chunkEnd; ++i ) {
-					const uint64_t r = xorshift64star();
-					const uint32_t r1 = static_cast<uint32_t>( r & 0xFFFFULL );
-					const uint32_t r2 = static_cast<uint32_t>( ( r >> 16 ) & 0xFFFFULL );
-					const uint32_t r3 = static_cast<uint32_t>( ( r >> 32 ) & 0xFFFFULL );
-					const uint32_t r4 = static_cast<uint32_t>( ( r >> 48 ) & 0xFFFFULL );
-
-					const uint32_t y1 = tables.modHeight[r1];
-					const uint32_t y2 = tables.modHeight[r2];
-					const uint32_t x1 = tables.modWidth[r3];
-					const uint32_t x2 = tables.modWidth[r4];
-
-					Color* const sRow1 = tables.srcRows[y1];
-					Color* const sRow2 = tables.srcRows[y2];
-					const Color* const dRow1 = tables.dstRows[y1];
-					const Color* const dRow2 = tables.dstRows[y2];
-
-					Color* const sPx1 = sRow1 + x1;
-					Color* const sPx2 = sRow2 + x2;
-					const Color* const dPx1 = dRow1 + x1;
-					const Color* const dPx2 = dRow2 + x2;
-
-					if( shouldSwapImpl<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
-						swapPixels( sPx1, sPx2 );
-						++numSwaps;
-					}
-				}
+				numSwaps += runRandomChunk<UseNeon>( chunkStart, chunkEnd, randomChunkIndex, tables );
+				++randomChunkIndex;
 			}
 
 #ifdef OUTPUT

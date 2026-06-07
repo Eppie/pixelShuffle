@@ -12,6 +12,8 @@ cmake --build build-pmu -j 8
 
 Use `-DPNGLAB_PMU_PROFILE=cache|branch|frontend|execution` to switch counter sets. The default chunk scope size is 100,000 candidates; override it with `-DPNGLAB_PMU_CHUNK_CANDIDATES=<N>`.
 
+Use `-DPNGLAB_RANDOM_MODE=local` to test locality-aware random chunks. Local mode keeps most random candidates inside one tile per chunk, with one global chunk every `PNGLAB_LOCAL_RANDOM_GLOBAL_CHUNK_INTERVAL` chunks to preserve long-range mixing. Tune it with `-DPNGLAB_LOCAL_RANDOM_TILE_SIZE=256` and `-DPNGLAB_LOCAL_RANDOM_GLOBAL_CHUNK_INTERVAL=16`. This can affect output quality; compare final images and diff/quality metrics against the default `global` mode before adopting it.
+
 Run with sudo so Apple `kperf` can program hardware counters:
 
 ```sh

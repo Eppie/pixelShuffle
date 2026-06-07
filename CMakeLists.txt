@@ -23,10 +23,24 @@ set(CPU_COUNTER_DIR "/Users/eppie/codex_projects/cpu_counter" CACHE PATH "Path t
 set(PNGLAB_PMU_PROFILE "cache" CACHE STRING "PMU counter profile: cache, branch, frontend, execution")
 set(PNGLAB_PMU_CHUNK_CANDIDATES "100000" CACHE STRING "Candidates per PMU chunk scope")
 set_property(CACHE PNGLAB_PMU_PROFILE PROPERTY STRINGS cache branch frontend execution)
+set(PNGLAB_RANDOM_MODE "global" CACHE STRING "Random candidate mode: global or local")
+set(PNGLAB_LOCAL_RANDOM_TILE_SIZE "256" CACHE STRING "Tile size for local random candidate chunks")
+set(PNGLAB_LOCAL_RANDOM_GLOBAL_CHUNK_INTERVAL "16" CACHE STRING "In local random mode, run one global chunk every N chunks; 0 disables global chunks")
+set_property(CACHE PNGLAB_RANDOM_MODE PROPERTY STRINGS global local)
 
 if(ENABLE_CPU_COUNTERS AND NOT EXISTS "${CPU_COUNTER_DIR}/perf.h")
     message(FATAL_ERROR "ENABLE_CPU_COUNTERS requires perf.h at CPU_COUNTER_DIR=${CPU_COUNTER_DIR}")
 endif()
+
+string(TOUPPER "${PNGLAB_RANDOM_MODE}" PNGLAB_RANDOM_MODE_UPPER)
+if(NOT PNGLAB_RANDOM_MODE_UPPER MATCHES "^(GLOBAL|LOCAL)$")
+    message(FATAL_ERROR "PNGLAB_RANDOM_MODE must be one of: global, local")
+endif()
+set(PNGLAB_RANDOM_DEFS
+    "PNGLAB_RANDOM_MODE_${PNGLAB_RANDOM_MODE_UPPER}"
+    "PNGLAB_LOCAL_RANDOM_TILE_SIZE=${PNGLAB_LOCAL_RANDOM_TILE_SIZE}"
+    "PNGLAB_LOCAL_RANDOM_GLOBAL_CHUNK_INTERVAL=${PNGLAB_LOCAL_RANDOM_GLOBAL_CHUNK_INTERVAL}"
+)
 
 set(PNGLAB_PMU_PROFILE_DEFS "")
 if(ENABLE_CPU_COUNTERS)
@@ -72,6 +86,7 @@ function(add_pixelshuffle_exe target src optim_flags extra_defs extra_libs)
         ${optim_flags}        # -Ofast, -O3, or -O0
     )
     target_compile_definitions(${target} PRIVATE ${extra_defs})
+    target_compile_definitions(${target} PRIVATE ${PNGLAB_RANDOM_DEFS})
     if(ENABLE_CPU_COUNTERS)
         target_compile_definitions(${target} PRIVATE ENABLE_CPU_COUNTERS ${PNGLAB_PMU_PROFILE_DEFS})
         target_include_directories(${target} PRIVATE "${CPU_COUNTER_DIR}")
