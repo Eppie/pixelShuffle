@@ -20,9 +20,24 @@ endif()
 option(ENABLE_NEON_SWAP_KERNEL "Enable the NEON-accelerated pngLAB swap kernel on ARM64" ON)
 option(ENABLE_CPU_COUNTERS "Enable Apple PMU cpu_counter instrumentation from CPU_COUNTER_DIR" OFF)
 set(CPU_COUNTER_DIR "/Users/eppie/codex_projects/cpu_counter" CACHE PATH "Path to the cpu_counter project containing perf.h")
+set(PNGLAB_PMU_PROFILE "cache" CACHE STRING "PMU counter profile: cache, branch, frontend, execution")
+set(PNGLAB_PMU_CHUNK_CANDIDATES "100000" CACHE STRING "Candidates per PMU chunk scope")
+set_property(CACHE PNGLAB_PMU_PROFILE PROPERTY STRINGS cache branch frontend execution)
 
 if(ENABLE_CPU_COUNTERS AND NOT EXISTS "${CPU_COUNTER_DIR}/perf.h")
     message(FATAL_ERROR "ENABLE_CPU_COUNTERS requires perf.h at CPU_COUNTER_DIR=${CPU_COUNTER_DIR}")
+endif()
+
+set(PNGLAB_PMU_PROFILE_DEFS "")
+if(ENABLE_CPU_COUNTERS)
+    string(TOUPPER "${PNGLAB_PMU_PROFILE}" PNGLAB_PMU_PROFILE_UPPER)
+    if(NOT PNGLAB_PMU_PROFILE_UPPER MATCHES "^(CACHE|BRANCH|FRONTEND|EXECUTION)$")
+        message(FATAL_ERROR "PNGLAB_PMU_PROFILE must be one of: cache, branch, frontend, execution")
+    endif()
+    list(APPEND PNGLAB_PMU_PROFILE_DEFS
+        "PNGLAB_PMU_PROFILE_${PNGLAB_PMU_PROFILE_UPPER}"
+        "PNGLAB_PMU_CHUNK_CANDIDATES=${PNGLAB_PMU_CHUNK_CANDIDATES}"
+    )
 endif()
 
 # ---------------------------------------------------------------------------
@@ -58,7 +73,7 @@ function(add_pixelshuffle_exe target src optim_flags extra_defs extra_libs)
     )
     target_compile_definitions(${target} PRIVATE ${extra_defs})
     if(ENABLE_CPU_COUNTERS)
-        target_compile_definitions(${target} PRIVATE ENABLE_CPU_COUNTERS)
+        target_compile_definitions(${target} PRIVATE ENABLE_CPU_COUNTERS ${PNGLAB_PMU_PROFILE_DEFS})
         target_include_directories(${target} PRIVATE "${CPU_COUNTER_DIR}")
     endif()
     target_link_libraries(${target} PRIVATE PNG::PNG ${extra_libs})

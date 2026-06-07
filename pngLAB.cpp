@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -23,6 +24,7 @@ namespace {
 
 constexpr int kOrderedLoopCount = 150;
 constexpr int kRandomLoopCount = 100;
+constexpr int kPmuChunkCandidateCount = PNGLAB_PMU_CHUNK_CANDIDATES;
 constexpr uint64_t kNeonWorkingSetLimitBytes = 8ULL * 1024ULL * 1024ULL;
 
 #if defined(PNG_LAB_ENABLE_NEON) && defined(__ARM_NEON)
@@ -462,6 +464,7 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 #endif
 		PNGLAB_PMU_SCOPE( "ordered_loop" );
 		for( int j = 0; j < kOrderedLoopCount; ++j ) {
+			PNGLAB_PMU_SCOPE( "ordered_iteration" );
 			int numSwaps = 0;
 			uint32_t row1 = 0;
 			uint32_t row2 = 0;
@@ -472,24 +475,28 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 			const uint32_t* nextCols = tables.orderedWidth.nextForStep( j );
 			const uint32_t* carryCols = tables.orderedWidth.carryForStep( j );
 
-			for( int i = 0; i < innerOrderedLoopCount; ++i ) {
-				Color* const sRow1 = tables.srcRows[row1];
-				Color* const sRow2 = tables.srcRows[row2];
-				const Color* const dRow1 = tables.dstRows[row1];
-				const Color* const dRow2 = tables.dstRows[row2];
+			for( int chunkStart = 0; chunkStart < innerOrderedLoopCount; chunkStart += kPmuChunkCandidateCount ) {
+				PNGLAB_PMU_SCOPE( "ordered_candidate_chunk" );
+				const int chunkEnd = std::min( chunkStart + kPmuChunkCandidateCount, innerOrderedLoopCount );
+				for( int i = chunkStart; i < chunkEnd; ++i ) {
+					Color* const sRow1 = tables.srcRows[row1];
+					Color* const sRow2 = tables.srcRows[row2];
+					const Color* const dRow1 = tables.dstRows[row1];
+					const Color* const dRow2 = tables.dstRows[row2];
 
-				Color* const sPx1 = sRow1 + col1;
-				Color* const sPx2 = sRow2 + col2;
-				const Color* const dPx1 = dRow1 + col1;
-				const Color* const dPx2 = dRow2 + col2;
+					Color* const sPx1 = sRow1 + col1;
+					Color* const sPx2 = sRow2 + col2;
+					const Color* const dPx1 = dRow1 + col1;
+					const Color* const dPx2 = dRow2 + col2;
 
-				if( shouldSwapImpl<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
-					swapPixels( sPx1, sPx2 );
-					++numSwaps;
+					if( shouldSwapImpl<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
+						swapPixels( sPx1, sPx2 );
+						++numSwaps;
+					}
+
+					advanceOrderedState( nextRows, carryRows, static_cast<uint32_t>( dHeight ), row1, row2 );
+					advanceOrderedState( nextCols, carryCols, static_cast<uint32_t>( dWidth ), col1, col2 );
 				}
-
-				advanceOrderedState( nextRows, carryRows, static_cast<uint32_t>( dHeight ), row1, row2 );
-				advanceOrderedState( nextCols, carryCols, static_cast<uint32_t>( dWidth ), col1, col2 );
 			}
 
 #ifdef OUTPUT
@@ -515,32 +522,38 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 #endif
 		PNGLAB_PMU_SCOPE( "random_loop" );
 		for( int j = 0; j < kRandomLoopCount; ++j ) {
+			PNGLAB_PMU_SCOPE( "random_iteration" );
 			int numSwaps = 0;
-			for( int i = 0; i < j * 100000; ++i ) {
-				const uint64_t r = xorshift64star();
-				const uint32_t r1 = static_cast<uint32_t>( r & 0xFFFFULL );
-				const uint32_t r2 = static_cast<uint32_t>( ( r >> 16 ) & 0xFFFFULL );
-				const uint32_t r3 = static_cast<uint32_t>( ( r >> 32 ) & 0xFFFFULL );
-				const uint32_t r4 = static_cast<uint32_t>( ( r >> 48 ) & 0xFFFFULL );
+			const int randomLoopCount = j * 100000;
+			for( int chunkStart = 0; chunkStart < randomLoopCount; chunkStart += kPmuChunkCandidateCount ) {
+				PNGLAB_PMU_SCOPE( "random_candidate_chunk" );
+				const int chunkEnd = std::min( chunkStart + kPmuChunkCandidateCount, randomLoopCount );
+				for( int i = chunkStart; i < chunkEnd; ++i ) {
+					const uint64_t r = xorshift64star();
+					const uint32_t r1 = static_cast<uint32_t>( r & 0xFFFFULL );
+					const uint32_t r2 = static_cast<uint32_t>( ( r >> 16 ) & 0xFFFFULL );
+					const uint32_t r3 = static_cast<uint32_t>( ( r >> 32 ) & 0xFFFFULL );
+					const uint32_t r4 = static_cast<uint32_t>( ( r >> 48 ) & 0xFFFFULL );
 
-				const uint32_t y1 = tables.modHeight[r1];
-				const uint32_t y2 = tables.modHeight[r2];
-				const uint32_t x1 = tables.modWidth[r3];
-				const uint32_t x2 = tables.modWidth[r4];
+					const uint32_t y1 = tables.modHeight[r1];
+					const uint32_t y2 = tables.modHeight[r2];
+					const uint32_t x1 = tables.modWidth[r3];
+					const uint32_t x2 = tables.modWidth[r4];
 
-				Color* const sRow1 = tables.srcRows[y1];
-				Color* const sRow2 = tables.srcRows[y2];
-				const Color* const dRow1 = tables.dstRows[y1];
-				const Color* const dRow2 = tables.dstRows[y2];
+					Color* const sRow1 = tables.srcRows[y1];
+					Color* const sRow2 = tables.srcRows[y2];
+					const Color* const dRow1 = tables.dstRows[y1];
+					const Color* const dRow2 = tables.dstRows[y2];
 
-				Color* const sPx1 = sRow1 + x1;
-				Color* const sPx2 = sRow2 + x2;
-				const Color* const dPx1 = dRow1 + x1;
-				const Color* const dPx2 = dRow2 + x2;
+					Color* const sPx1 = sRow1 + x1;
+					Color* const sPx2 = sRow2 + x2;
+					const Color* const dPx1 = dRow1 + x1;
+					const Color* const dPx2 = dRow2 + x2;
 
-				if( shouldSwapImpl<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
-					swapPixels( sPx1, sPx2 );
-					++numSwaps;
+					if( shouldSwapImpl<UseNeon>( sPx1, sPx2, dPx1, dPx2 ) ) {
+						swapPixels( sPx1, sPx2 );
+						++numSwaps;
+					}
 				}
 			}
 

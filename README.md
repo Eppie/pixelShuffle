@@ -10,6 +10,8 @@ cmake -S . -B build-pmu -DCMAKE_BUILD_TYPE=Release -DENABLE_CPU_COUNTERS=ON -DCP
 cmake --build build-pmu -j 8
 ```
 
+Use `-DPNGLAB_PMU_PROFILE=cache|branch|frontend|execution` to switch counter sets. The default chunk scope size is 100,000 candidates; override it with `-DPNGLAB_PMU_CHUNK_CANDIDATES=<N>`.
+
 Run with sudo so Apple `kperf` can program hardware counters:
 
 ```sh
