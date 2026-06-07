@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include "profiler.h"
+#include "profile_stats.h"
 
 union fi {
 	float f;
@@ -57,7 +58,13 @@ public:
 		}
 	}
 	float get( float x ) const {
-		PROFILE_FUNCTION();
+			PROFILE_FUNCTION();
+#ifdef PROFILE_STATS
+		static uint64_t sampleCounter = 0;
+		++sampleCounter;
+		const bool sampled = ( sampleCounter & 0xFFFu ) == 0;
+		const uint64_t startNs = sampled ? ProfileStats::nowNs() : 0;
+#endif
 		fi fi;
 		fi.f = x;
 		int a = ( fi.i >> 23 ) & mask( 8 );
@@ -67,7 +74,11 @@ public:
 		float f;
 		int idx = b1 >> ( 23 - N );
 		f = tbl0_[a] * ( tbl1_[idx].app + float( b2 ) * tbl1_[idx].rev );
+#ifdef PROFILE_STATS
+		if( sampled ) {
+			ProfileStats::add( ProfileStats::EventId::PowGetSample, ProfileStats::nowNs() - startNs, 1, 1 );
+		}
+#endif
 		return f;
 	}
 };
-

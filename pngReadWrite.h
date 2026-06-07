@@ -2,14 +2,18 @@
 #include <png.h>
 
 #include "profiler.h"
+#include "profile_stats.h"
 
 int sWidth;
 int sHeight;
 int dWidth;
 int dHeight;
 
-void readPNGFile( char* filename, png_bytep** rowPointers, int* width, int* height ) { // Changed to png_bytep**
+void readPNGFile( const char* filename, png_bytep** rowPointers, int* width, int* height ) { // Changed to png_bytep**
 	PROFILE_SCOPE(readPNGFile);
+#ifdef PROFILE_STATS
+	const uint64_t startNs = ProfileStats::nowNs();
+#endif
 	png_byte bit_depth;
 	png_byte color_type;
 	FILE* fp = fopen( filename, "rb" );
@@ -78,10 +82,21 @@ void readPNGFile( char* filename, png_bytep** rowPointers, int* width, int* heig
 
 	png_destroy_read_struct( &png, &info, NULL );
 	fclose( fp );
+#ifdef PROFILE_STATS
+	ProfileStats::add(
+		ProfileStats::EventId::ReadPNG,
+		ProfileStats::nowNs() - startNs,
+		1,
+		static_cast<uint64_t>( *width ) * static_cast<uint64_t>( *height )
+	);
+#endif
 }
 
-void writePNGFile( const char* filename, png_bytep* rowPointers, bool done = false ) {
+void writePNGFile( const char* filename, png_bytep* rowPointers, int width, int height, bool hasAlpha = true, bool done = false ) {
 	PROFILE_SCOPE(writePNGFile);
+#ifdef PROFILE_STATS
+	const uint64_t startNs = ProfileStats::nowNs();
+#endif
 	FILE* fp = fopen( filename, "wb" );
 
 	if( !fp ) {
@@ -113,7 +128,7 @@ void writePNGFile( const char* filename, png_bytep* rowPointers, bool done = fal
 
 	png_init_io( png, fp );
 
-	png_set_IHDR( png, info, dWidth, dHeight, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
+	png_set_IHDR( png, info, width, height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT );
 
 	png_write_info( png, info );
 
@@ -131,5 +146,12 @@ void writePNGFile( const char* filename, png_bytep* rowPointers, bool done = fal
 	fclose( fp );
 	// png_free_data( png, info, PNG_FREE_ALL, -1 ); // This is problematic after png is destroyed or if info is handled by destroy
 	png_destroy_write_struct( &png, &info ); // Pass &info to free it along with png struct
+#ifdef PROFILE_STATS
+	ProfileStats::add(
+		ProfileStats::EventId::WritePNG,
+		ProfileStats::nowNs() - startNs,
+		1,
+		static_cast<uint64_t>( width ) * static_cast<uint64_t>( height )
+	);
+#endif
 }
-

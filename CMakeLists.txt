@@ -17,6 +17,8 @@ if(ENABLE_PROFILING)
     add_compile_definitions(ENABLE_PROFILING)
 endif()
 
+option(ENABLE_NEON_SWAP_KERNEL "Enable the NEON-accelerated pngLAB swap kernel on ARM64" ON)
+
 # ---------------------------------------------------------------------------
 #  Dependencies
 # ---------------------------------------------------------------------------
@@ -52,6 +54,16 @@ function(add_pixelshuffle_exe target src optim_flags extra_defs extra_libs)
     target_link_libraries(${target} PRIVATE PNG::PNG ${extra_libs})
 endfunction()
 
+set(PNGLAB_ARCH_DEFS "")
+if(ENABLE_NEON_SWAP_KERNEL AND (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$"))
+    list(APPEND PNGLAB_ARCH_DEFS PNG_LAB_ENABLE_NEON)
+endif()
+
+set(PNGLAB_HARNESS_DEFS "SHOULD_SWAP_AB_HARNESS")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+    list(APPEND PNGLAB_HARNESS_DEFS PNG_LAB_ENABLE_NEON)
+endif()
+
 # ---------------------------------------------------------------------------
 #  Build targets (pngRGB, pngLAB, hungarian)
 # ---------------------------------------------------------------------------
@@ -64,7 +76,13 @@ else()
 endif()
 
 #add_pixelshuffle_exe(pngRGB pngRGB.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
-add_pixelshuffle_exe(pngLAB pngLAB.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB pngLAB.cpp "${OFLAG}" "OUTPUT;ANIMATION;${PNGLAB_ARCH_DEFS}" "")
+add_pixelshuffle_exe(pngLAB_clean pngLAB_clean.cpp "${OFLAG}" "OUTPUT;ANIMATION;${PNGLAB_ARCH_DEFS}" "")
+add_pixelshuffle_exe(pngLAB_spiral pngLAB_spiral.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_pretty pngLAB_pretty.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_bench_core pngLAB.cpp "${OFLAG}" "PROFILE_STATS;${PNGLAB_ARCH_DEFS}" "")
+add_pixelshuffle_exe(pngLAB_bench_e2e pngLAB.cpp "${OFLAG}" "PROFILE_STATS;OUTPUT;ANIMATION;${PNGLAB_ARCH_DEFS}" "")
+add_pixelshuffle_exe(shouldSwap_ab_harness pngLAB.cpp "${OFLAG}" "${PNGLAB_HARNESS_DEFS}" "")
 
 # hungarian uses OpenMP and a slightly different optimisation level
 set(HUNGARIAN_OFLAG "-O3")

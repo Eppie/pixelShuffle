@@ -130,6 +130,58 @@ pngLAB/fast:
 .PHONY : pngLAB/fast
 
 #=============================================================================
+# Target rules for targets named pngLAB_clean
+
+# Build rule for target.
+pngLAB_clean: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 pngLAB_clean
+.PHONY : pngLAB_clean
+
+# fast build rule for target.
+pngLAB_clean/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_clean.dir/build.make CMakeFiles/pngLAB_clean.dir/build
+.PHONY : pngLAB_clean/fast
+
+#=============================================================================
+# Target rules for targets named pngLAB_bench_core
+
+# Build rule for target.
+pngLAB_bench_core: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 pngLAB_bench_core
+.PHONY : pngLAB_bench_core
+
+# fast build rule for target.
+pngLAB_bench_core/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_core.dir/build.make CMakeFiles/pngLAB_bench_core.dir/build
+.PHONY : pngLAB_bench_core/fast
+
+#=============================================================================
+# Target rules for targets named pngLAB_bench_e2e
+
+# Build rule for target.
+pngLAB_bench_e2e: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 pngLAB_bench_e2e
+.PHONY : pngLAB_bench_e2e
+
+# fast build rule for target.
+pngLAB_bench_e2e/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_e2e.dir/build.make CMakeFiles/pngLAB_bench_e2e.dir/build
+.PHONY : pngLAB_bench_e2e/fast
+
+#=============================================================================
+# Target rules for targets named shouldSwap_ab_harness
+
+# Build rule for target.
+shouldSwap_ab_harness: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 shouldSwap_ab_harness
+.PHONY : shouldSwap_ab_harness
+
+# fast build rule for target.
+shouldSwap_ab_harness/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/shouldSwap_ab_harness.dir/build.make CMakeFiles/shouldSwap_ab_harness.dir/build
+.PHONY : shouldSwap_ab_harness/fast
+
+#=============================================================================
 # Target rules for targets named hungarian
 
 # Build rule for target.
@@ -198,6 +250,9 @@ pngLAB.o: pngLAB.cpp.o
 # target to build an object file
 pngLAB.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB.dir/build.make CMakeFiles/pngLAB.dir/pngLAB.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_core.dir/build.make CMakeFiles/pngLAB_bench_core.dir/pngLAB.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_e2e.dir/build.make CMakeFiles/pngLAB_bench_e2e.dir/pngLAB.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/shouldSwap_ab_harness.dir/build.make CMakeFiles/shouldSwap_ab_harness.dir/pngLAB.cpp.o
 .PHONY : pngLAB.cpp.o
 
 pngLAB.i: pngLAB.cpp.i
@@ -206,6 +261,9 @@ pngLAB.i: pngLAB.cpp.i
 # target to preprocess a source file
 pngLAB.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB.dir/build.make CMakeFiles/pngLAB.dir/pngLAB.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_core.dir/build.make CMakeFiles/pngLAB_bench_core.dir/pngLAB.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_e2e.dir/build.make CMakeFiles/pngLAB_bench_e2e.dir/pngLAB.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/shouldSwap_ab_harness.dir/build.make CMakeFiles/shouldSwap_ab_harness.dir/pngLAB.cpp.i
 .PHONY : pngLAB.cpp.i
 
 pngLAB.s: pngLAB.cpp.s
@@ -214,7 +272,34 @@ pngLAB.s: pngLAB.cpp.s
 # target to generate assembly for a file
 pngLAB.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB.dir/build.make CMakeFiles/pngLAB.dir/pngLAB.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_core.dir/build.make CMakeFiles/pngLAB_bench_core.dir/pngLAB.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_bench_e2e.dir/build.make CMakeFiles/pngLAB_bench_e2e.dir/pngLAB.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/shouldSwap_ab_harness.dir/build.make CMakeFiles/shouldSwap_ab_harness.dir/pngLAB.cpp.s
 .PHONY : pngLAB.cpp.s
+
+pngLAB_clean.o: pngLAB_clean.cpp.o
+.PHONY : pngLAB_clean.o
+
+# target to build an object file
+pngLAB_clean.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_clean.dir/build.make CMakeFiles/pngLAB_clean.dir/pngLAB_clean.cpp.o
+.PHONY : pngLAB_clean.cpp.o
+
+pngLAB_clean.i: pngLAB_clean.cpp.i
+.PHONY : pngLAB_clean.i
+
+# target to preprocess a source file
+pngLAB_clean.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_clean.dir/build.make CMakeFiles/pngLAB_clean.dir/pngLAB_clean.cpp.i
+.PHONY : pngLAB_clean.cpp.i
+
+pngLAB_clean.s: pngLAB_clean.cpp.s
+.PHONY : pngLAB_clean.s
+
+# target to generate assembly for a file
+pngLAB_clean.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/pngLAB_clean.dir/build.make CMakeFiles/pngLAB_clean.dir/pngLAB_clean.cpp.s
+.PHONY : pngLAB_clean.cpp.s
 
 # Help Target
 help:
@@ -228,12 +313,19 @@ help:
 	@echo "... profile"
 	@echo "... hungarian"
 	@echo "... pngLAB"
+	@echo "... pngLAB_bench_core"
+	@echo "... pngLAB_bench_e2e"
+	@echo "... pngLAB_clean"
+	@echo "... shouldSwap_ab_harness"
 	@echo "... hungarian.o"
 	@echo "... hungarian.i"
 	@echo "... hungarian.s"
 	@echo "... pngLAB.o"
 	@echo "... pngLAB.i"
 	@echo "... pngLAB.s"
+	@echo "... pngLAB_clean.o"
+	@echo "... pngLAB_clean.i"
+	@echo "... pngLAB_clean.s"
 .PHONY : help
 
 
