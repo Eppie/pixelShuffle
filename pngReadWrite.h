@@ -7,12 +7,16 @@
 #include "profile_stats.h"
 #include "pmu_profile.h"
 
-int sWidth;
-int sHeight;
-int dWidth;
-int dHeight;
+// `inline` so these single header-defined definitions are ODR-safe if the
+// header is ever included into more than one translation unit that links
+// together (today each binary is a single TU, but the shared-core refactor
+// relies on this holding).
+inline int sWidth;
+inline int sHeight;
+inline int dWidth;
+inline int dHeight;
 
-void readPNGFile( const char* filename, png_bytep** rowPointers, int* width, int* height ) { // Changed to png_bytep**
+inline void readPNGFile( const char* filename, png_bytep** rowPointers, int* width, int* height ) { // Changed to png_bytep**
 	PNGLAB_PMU_SCOPE( "read_png" );
 #ifdef PROFILE_STATS
 	const uint64_t startNs = ProfileStats::nowNs();
@@ -95,7 +99,7 @@ void readPNGFile( const char* filename, png_bytep** rowPointers, int* width, int
 #endif
 }
 
-void writePNGFile( const char* filename, png_bytep* rowPointers, int width, int height, bool hasAlpha = true, bool done = false ) {
+inline void writePNGFile( const char* filename, png_bytep* rowPointers, int width, int height, bool hasAlpha = true, bool done = false ) {
 	PNGLAB_PMU_SCOPE( "write_png" );
 #ifdef PROFILE_STATS
 	const uint64_t startNs = ProfileStats::nowNs();
