@@ -59,7 +59,13 @@ These `#define`s reshape the same source into different binaries:
 
 ## Variants
 
-The `pngLAB_*` files (spiral, pretty, blur_anneal, coarse_patches, particle_flow, hilbert_sort, wavefront_flow, random_walk_relax, transport_stream) are independent copies of `pngLAB.cpp` that swap in a different traversal/optimization strategy over the same LAB-distance objective. They share `pngReadWrite.h` and the helper headers but are **not** factored into a common library — edits to the core algorithm must be propagated by hand if they should apply across variants. `hungarian.cpp` is a separate approach: OpenMP-parallel patch-based assignment (Hungarian algorithm), built only when OpenMP is found.
+The `pngLAB_*` files are **not** forks of `pngLAB.cpp`. They fall into two families that each reimplement the pixel-rearrangement objective with a different strategy and data model:
+
+- **`pngLAB.cpp`** (standalone): greedy pairwise-swap over `struct Color`, full RGB↔Lab round-trip. Shares nothing extractable with the others.
+- **Gen-1 `{pngLAB_clean, pngLAB_spiral, pngLAB_pretty}`**: camelCase rewrites of the round-trip swap approach (`clean`/`pretty` are near-twins).
+- **Gen-2 `{pngLAB_blur_anneal, pngLAB_coarse_patches, pngLAB_particle_flow, pngLAB_hilbert_sort, pngLAB_wavefront_flow, pngLAB_random_walk_relax, pngLAB_transport_stream}`**: an assignment/transport family over `struct LabColor`. Their byte-identical shared scaffolding — `struct Geometry`/`LabColor`/`Pixel`, `srgbToLinear`/`rgbaToLab`, `imageToLab`, `squaredLabDistance`, `quantize`/`colorKey`/`labLess` — lives in **`lab_grid.h`**; each `.cpp` keeps only its unique optimization strategy. Pieces that genuinely differ between these variants (the `OwnedRows` RAII wrapper, `XorShift64Star` + its per-variant seed, `totalCost`) deliberately stay per-`.cpp`.
+
+All variants share PNG I/O via `pngReadWrite.h` (whose globals/functions are `inline` for ODR-safety across TUs). `hungarian.cpp` is a separate approach: OpenMP-parallel patch-based assignment (Hungarian algorithm), built only when OpenMP is found.
 
 ## PMU profiling (Apple Silicon)
 
