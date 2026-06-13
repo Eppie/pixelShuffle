@@ -404,12 +404,12 @@ void labToImage( const Color* lab, png_bytep* image ) {
 
 float totalDiff( const Color* src, const Color* dst ) {
 	PNGLAB_PMU_SCOPE( "total_diff" );
-	const int length = dHeight * dWidth;
+	const int64_t length = static_cast<int64_t>( dHeight ) * dWidth;
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::TotalDiff, static_cast<uint64_t>( length ) );
 #endif
 	float diff = 0.0f;
-	for( int i = 0; i < length; ++i ) {
+	for( int64_t i = 0; i < length; ++i ) {
 		const size_t row = static_cast<size_t>( ( i / dHeight ) % dHeight );
 		const size_t col = static_cast<size_t>( i % dWidth );
 		diff += pixelDiff( src + row * static_cast<size_t>( dWidth ) + col, dst + row * static_cast<size_t>( dWidth ) + col );
@@ -545,7 +545,7 @@ template <bool UseNeon>
 void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png_bytep* rowPointersNew, const KernelTables& tables ) {
 	PNGLAB_PMU_SCOPE( "process_png_file" );
 
-	const int innerOrderedLoopCount = 300000 * ( dWidth / 320 ) * ( dWidth / 320 );
+	const int64_t innerOrderedLoopCount = static_cast<int64_t>( 300000 ) * ( dWidth / 320 ) * ( dWidth / 320 );
 
 #ifdef PROFILE_STATS
 	const uint64_t orderedCandidates = static_cast<uint64_t>( kOrderedLoopCount ) * static_cast<uint64_t>( innerOrderedLoopCount );
@@ -570,10 +570,10 @@ void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png
 			const uint32_t* nextCols = tables.orderedWidth.nextForStep( j );
 			const uint32_t* carryCols = tables.orderedWidth.carryForStep( j );
 
-			for( int chunkStart = 0; chunkStart < innerOrderedLoopCount; chunkStart += kPmuChunkCandidateCount ) {
+			for( int64_t chunkStart = 0; chunkStart < innerOrderedLoopCount; chunkStart += kPmuChunkCandidateCount ) {
 				PNGLAB_PMU_SCOPE( "ordered_candidate_chunk" );
-				const int chunkEnd = std::min( chunkStart + kPmuChunkCandidateCount, innerOrderedLoopCount );
-				for( int i = chunkStart; i < chunkEnd; ++i ) {
+				const int64_t chunkEnd = std::min( chunkStart + kPmuChunkCandidateCount, innerOrderedLoopCount );
+				for( int64_t i = chunkStart; i < chunkEnd; ++i ) {
 					Color* const sRow1 = tables.srcRows[row1];
 					Color* const sRow2 = tables.srcRows[row2];
 					const Color* const dRow1 = tables.dstRows[row1];
@@ -791,7 +791,7 @@ int runShouldSwapHarness( int argc, char* argv[] ) {
 	Color* dstLab = imageToLab( rowPointersDst );
 	const KernelTables tables( srcLab, dstLab );
 
-	const int innerOrderedLoopCount = 300000 * ( dWidth / 320 ) * ( dWidth / 320 );
+	const int64_t innerOrderedLoopCount = static_cast<int64_t>( 300000 ) * ( dWidth / 320 ) * ( dWidth / 320 );
 	bool vectorNumericReported = false;
 	bool vectorDecisionReported = false;
 	bool scalarReduceNumericReported = false;
@@ -837,7 +837,7 @@ int runShouldSwapHarness( int argc, char* argv[] ) {
 		const uint32_t* nextCols = tables.orderedWidth.nextForStep( j );
 		const uint32_t* carryCols = tables.orderedWidth.carryForStep( j );
 
-		for( int i = 0; i < innerOrderedLoopCount; ++i ) {
+		for( int64_t i = 0; i < innerOrderedLoopCount; ++i ) {
 			Color* const sRow1 = tables.srcRows[row1];
 			Color* const sRow2 = tables.srcRows[row2];
 			const Color* const dRow1 = tables.dstRows[row1];
@@ -848,7 +848,7 @@ int runShouldSwapHarness( int argc, char* argv[] ) {
 			const Color* const dPx1 = dRow1 + col1;
 			const Color* const dPx2 = dRow2 + col2;
 
-			inspectCandidate( "ordered", j, i, row1, col1, row2, col2, sPx1, sPx2, dPx1, dPx2 );
+			inspectCandidate( "ordered", j, static_cast<int>( i ), row1, col1, row2, col2, sPx1, sPx2, dPx1, dPx2 );
 
 			advanceOrderedState( nextRows, carryRows, static_cast<uint32_t>( dHeight ), row1, row2 );
 			advanceOrderedState( nextCols, carryCols, static_cast<uint32_t>( dWidth ), col1, col2 );
