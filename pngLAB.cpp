@@ -14,7 +14,6 @@
 
 #include "pngReadWrite.h"
 #include "fmath.hpp"
-#include "profiler.h"
 #include "profile_stats.h"
 #include "pmu_profile.h"
 
@@ -157,7 +156,6 @@ const locale& userLocale() {
 }
 
 HOT_INLINE uint64_t xorshift64star() {
-	PROFILE_FUNCTION();
 	PROFILE_SAMPLED_BEGIN( sampleCounter );
 	x ^= x >> 12;
 	x ^= x << 25;
@@ -168,7 +166,6 @@ HOT_INLINE uint64_t xorshift64star() {
 }
 
 inline Color XYZToRGB( const Color& px ) {
-	PROFILE_FUNCTION();
 	static PowGenerator f( 1.0 / 2.4 );
 
 	float X = px.A / 100.0;
@@ -191,7 +188,6 @@ inline Color XYZToRGB( const Color& px ) {
 }
 
 inline Color RGBToXYZ( png_bytep px ) {
-	PROFILE_FUNCTION();
 	static PowGenerator f( 2.4 );
 	float R = px[0] / 255.0;
 	float G = px[1] / 255.0;
@@ -213,7 +209,6 @@ inline Color RGBToXYZ( png_bytep px ) {
 }
 
 inline Color XYZToLab( const Color& px ) {
-	PROFILE_FUNCTION();
 	static PowGenerator f( 1.0 / 3.0 );
 	float X = px.A / 95.047;
 	float Y = px.B / 100.0;
@@ -231,7 +226,6 @@ inline Color XYZToLab( const Color& px ) {
 }
 
 inline Color LabToXYZ( const Color& px ) {
-	PROFILE_FUNCTION();
 	float Y = ( px.A + 16.0 ) / 116.0;
 	float X = px.B / 500.0 + Y;
 	float Z = Y - px.C / 200.0;
@@ -248,7 +242,6 @@ inline Color LabToXYZ( const Color& px ) {
 }
 
 inline Color RGBToLab( png_bytep px ) {
-	PROFILE_FUNCTION();
 	return XYZToLab( RGBToXYZ( px ) );
 }
 
@@ -260,7 +253,6 @@ HOT_INLINE float pixelDiffValue( const Color* px1, const Color* px2 ) {
 }
 
 HOT_INLINE float pixelDiff( const Color* px1, const Color* px2 ) {
-	PROFILE_FUNCTION();
 	PROFILE_SAMPLED_BEGIN( sampleCounter );
 	const float result = pixelDiffValue( px1, px2 );
 	PROFILE_SAMPLED_END( ProfileStats::EventId::PixelDiffSample );
@@ -343,7 +335,6 @@ HOT_INLINE SwapBreakdown neonScalarReduceSwapBreakdown( const Color* sPx1, const
 
 template <bool UseNeon>
 HOT_INLINE bool shouldSwapImpl( const Color* sPx1, const Color* sPx2, const Color* dPx1, const Color* dPx2 ) {
-	PROFILE_FUNCTION();
 	PROFILE_SAMPLED_BEGIN( sampleCounter );
 #if defined(PNG_LAB_ENABLE_NEON) && defined(__ARM_NEON)
 	const SwapBreakdown breakdown = [] ( const Color* leftSrc, const Color* rightSrc, const Color* leftDst, const Color* rightDst ) {
@@ -361,7 +352,6 @@ HOT_INLINE bool shouldSwapImpl( const Color* sPx1, const Color* sPx2, const Colo
 }
 
 HOT_INLINE void swapPixels( Color* px1, Color* px2 ) {
-	PROFILE_FUNCTION();
 	PROFILE_SAMPLED_BEGIN( sampleCounter );
 #if defined(PNG_LAB_ENABLE_NEON) && defined(__ARM_NEON)
 	const float32x4_t lhs = vld1q_f32( &px1->A );
@@ -377,7 +367,6 @@ HOT_INLINE void swapPixels( Color* px1, Color* px2 ) {
 }
 
 Color* imageToLab( png_bytep* image ) {
-	PROFILE_FUNCTION();
 	PNGLAB_PMU_SCOPE( "image_to_lab" );
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::ImageToLab, static_cast<uint64_t>( dWidth ) * static_cast<uint64_t>( dHeight ) );
@@ -397,7 +386,6 @@ Color* imageToLab( png_bytep* image ) {
 }
 
 void labToImage( const Color* lab, png_bytep* image ) {
-	PROFILE_FUNCTION();
 	PNGLAB_PMU_SCOPE( "lab_to_image" );
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::LabToImage, static_cast<uint64_t>( dWidth ) * static_cast<uint64_t>( dHeight ) );
@@ -415,7 +403,6 @@ void labToImage( const Color* lab, png_bytep* image ) {
 }
 
 float totalDiff( const Color* src, const Color* dst ) {
-	PROFILE_FUNCTION();
 	PNGLAB_PMU_SCOPE( "total_diff" );
 	const int length = dHeight * dWidth;
 #ifdef PROFILE_STATS
@@ -556,7 +543,6 @@ void printIterationStatus( int iteration, float diff, int numSwaps, float denomi
 
 template <bool UseNeon>
 void processPNGFileImpl( Color* __restrict src, const Color* __restrict dst, png_bytep* rowPointersNew, const KernelTables& tables ) {
-	PROFILE_FUNCTION();
 	PNGLAB_PMU_SCOPE( "process_png_file" );
 
 	const int innerOrderedLoopCount = 300000 * ( dWidth / 320 ) * ( dWidth / 320 );
@@ -669,7 +655,6 @@ void processPNGFile( Color* __restrict src, const Color* __restrict dst, png_byt
 }
 
 string split( string& s ) {
-	PROFILE_FUNCTION();
 	stringstream ss( s );
 	string result;
 	getline( ss, result, '/' );
@@ -929,7 +914,6 @@ int runShouldSwapHarness( int argc, char* argv[] ) {
 
 #ifndef SHOULD_SWAP_AB_HARNESS
 int main( int argc, char* argv[] ) {
-	PROFILE_FUNCTION();
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer mainTimer( ProfileStats::EventId::ProgramTotal );
 #endif

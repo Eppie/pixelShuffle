@@ -15,7 +15,6 @@
 #include "fmath.hpp"
 #include "pngReadWrite.h"
 #include "profile_stats.h"
-#include "profiler.h"
 
 namespace {
 
@@ -330,7 +329,6 @@ class XorShift64Star {
 public:
 	// Generates one 64-bit sample and records sampled timing when profiling is enabled.
 	HOT_INLINE uint64_t next() {
-		PROFILE_FUNCTION();
 		PROFILE_SAMPLED_BEGIN( sampleCounter );
 		state_ ^= state_ >> 12;
 		state_ ^= state_ << 25;
@@ -364,7 +362,6 @@ std::string animationPrefixFor( const char* outputPath ) {
 
 // Converts XYZ-space working values back to display RGB bytes.
 inline LabColor xyzToRgb( const LabColor& px ) {
-	PROFILE_FUNCTION();
 	static PowGenerator gamma( 1.0 / 2.4 );
 
 	const float x = px.l / 100.0f;
@@ -384,7 +381,6 @@ inline LabColor xyzToRgb( const LabColor& px ) {
 
 // Converts one PNG RGBA pixel to XYZ as the first half of the RGB -> LAB transform.
 inline LabColor rgbToXyz( png_bytep px ) {
-	PROFILE_FUNCTION();
 	static PowGenerator gamma( 2.4f );
 
 	float r = px[0] / 255.0f;
@@ -409,7 +405,6 @@ inline LabColor rgbToXyz( png_bytep px ) {
 
 // Converts XYZ values to CIE LAB, which is the metric space the swap kernel operates in.
 inline LabColor xyzToLab( const LabColor& px ) {
-	PROFILE_FUNCTION();
 	static PowGenerator cubicRoot( 1.0 / 3.0 );
 
 	float x = px.l / 95.047f;
@@ -430,7 +425,6 @@ inline LabColor xyzToLab( const LabColor& px ) {
 
 // Inverse LAB -> XYZ transform used when writing the final image or animation frames.
 inline LabColor labToXyz( const LabColor& px ) {
-	PROFILE_FUNCTION();
 
 	float y = ( px.l + 16.0f ) / 116.0f;
 	float x = px.a / 500.0f + y;
@@ -445,7 +439,6 @@ inline LabColor labToXyz( const LabColor& px ) {
 
 // Convenience entry point for the full PNG RGBA -> LAB conversion.
 inline LabColor rgbaToLab( png_bytep px ) {
-	PROFILE_FUNCTION();
 	return xyzToLab( rgbToXyz( px ) );
 }
 
@@ -471,7 +464,6 @@ HOT_INLINE float squaredLabDistanceNeonExact( const LabColor* lhs, const LabColo
 // Thin profiling wrapper around the selected scalar or exact-safe NEON distance implementation.
 template <bool UseNeon>
 HOT_INLINE float pixelDiff( const LabColor* lhs, const LabColor* rhs ) {
-	PROFILE_FUNCTION();
 	PROFILE_SAMPLED_BEGIN( sampleCounter );
 #if defined(PNG_LAB_ENABLE_NEON) && defined(__ARM_NEON)
 	float result = 0.0f;
@@ -490,7 +482,6 @@ HOT_INLINE float pixelDiff( const LabColor* lhs, const LabColor* rhs ) {
 // Core swap predicate: compare "crossed" cost versus "kept" cost for one candidate pair.
 template <bool UseNeon>
 HOT_INLINE bool shouldSwap( const LabColor* src1, const LabColor* src2, const LabColor* dst1, const LabColor* dst2 ) {
-	PROFILE_FUNCTION();
 	PROFILE_SAMPLED_BEGIN( sampleCounter );
 	const float swapCost = pixelDiff<UseNeon>( src1, dst2 ) + pixelDiff<UseNeon>( src2, dst1 );
 	const float keepCost = pixelDiff<UseNeon>( src1, dst1 ) + pixelDiff<UseNeon>( src2, dst2 );
@@ -501,7 +492,6 @@ HOT_INLINE bool shouldSwap( const LabColor* src1, const LabColor* src2, const La
 // Swaps the two source pixels, using a full-width NEON move when that path is active.
 template <bool UseNeon>
 HOT_INLINE void swapPixels( LabColor* lhs, LabColor* rhs ) {
-	PROFILE_FUNCTION();
 	PROFILE_SAMPLED_BEGIN( sampleCounter );
 #if defined(PNG_LAB_ENABLE_NEON) && defined(__ARM_NEON)
 	if constexpr( UseNeon ) {
@@ -524,7 +514,6 @@ HOT_INLINE void swapPixels( LabColor* lhs, LabColor* rhs ) {
 
 // Converts an RGBA image into the aligned LAB working buffer used by the kernel.
 LabBuffer imageToLab( const Geometry& geometry, png_bytep* image ) {
-	PROFILE_FUNCTION();
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::ImageToLab, static_cast<uint64_t>( geometry.pixelCount() ) );
 #endif
@@ -541,7 +530,6 @@ LabBuffer imageToLab( const Geometry& geometry, png_bytep* image ) {
 
 // Converts the LAB working image back to RGBA for final output or animation snapshots.
 void labToImage( const Geometry& geometry, const LabColor* lab, png_bytep* image ) {
-	PROFILE_FUNCTION();
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::LabToImage, static_cast<uint64_t>( geometry.pixelCount() ) );
 #endif
@@ -559,7 +547,6 @@ void labToImage( const Geometry& geometry, const LabColor* lab, png_bytep* image
 
 // Diagnostic-only full-image diff used for logging. This is intentionally separate from the hot swap kernel.
 float totalDiff( const Geometry& geometry, const LabColor* src, const LabColor* dst ) {
-	PROFILE_FUNCTION();
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer timer( ProfileStats::EventId::TotalDiff, static_cast<uint64_t>( geometry.pixelCount() ) );
 #endif
@@ -726,7 +713,6 @@ void runRandomPhase(
 // Top-level kernel driver for one scalar or NEON configuration, including per-phase profiling scopes.
 template <bool UseNeon>
 void processImage( const Geometry& geometry, LabColor* __restrict src, const LabColor* __restrict dst, png_bytep* outputRows, const KernelTables& tables, const std::string* animationPrefix ) {
-	PROFILE_FUNCTION();
 	const int scale = geometry.width / 320;
 	const int innerOrderedLoopCount = 300000 * scale * scale;
 
@@ -775,7 +761,6 @@ void runKernel( const Geometry& geometry, LabColor* __restrict src, const LabCol
 
 // CLI entry point: read PNGs, build the working LAB buffers, run the kernel, and write the final image.
 int main( int argc, char* argv[] ) {
-	PROFILE_FUNCTION();
 #ifdef PROFILE_STATS
 	ProfileStats::ScopedTimer mainTimer( ProfileStats::EventId::ProgramTotal );
 #endif

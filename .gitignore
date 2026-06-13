@@ -5,6 +5,13 @@ pngLAB
 pngLAB_bench_core
 pngLAB_bench_e2e
 pngLAB_clean
+pngLAB_blur_anneal
+pngLAB_coarse_patches
+pngLAB_particle_flow
+pngLAB_hilbert_sort
+pngLAB_wavefront_flow
+pngLAB_random_walk_relax
+pngLAB_transport_stream
 shouldSwap_ab_harness
 test_api_compile
 test_registry_check
@@ -18,3 +25,7 @@ CMakeFiles/
 cmake_install.cmake
 build/
 build-*/
+variant_runs/
+
+# CMake regenerates the in-source Makefile; do not track it
+/Makefile

@@ -13,7 +13,6 @@
 #include "fmath.hpp"
 #include "pngReadWrite.h"
 #include "profile_stats.h"
-#include "profiler.h"
 
 namespace {
 

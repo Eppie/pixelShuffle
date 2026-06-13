@@ -11,12 +11,6 @@ set(COMMON_FLAGS
     -mtune=native
 )
 
-# Optional profiling instrumentation (cmake -DENABLE_PROFILING=ON ..)
-option(ENABLE_PROFILING "Define ENABLE_PROFILING" OFF)
-if(ENABLE_PROFILING)
-    add_compile_definitions(ENABLE_PROFILING)
-endif()
-
 option(ENABLE_NEON_SWAP_KERNEL "Enable the NEON-accelerated pngLAB swap kernel on ARM64" ON)
 option(ENABLE_CPU_COUNTERS "Enable Apple PMU cpu_counter instrumentation from CPU_COUNTER_DIR" OFF)
 set(CPU_COUNTER_DIR "/Users/eppie/codex_projects/cpu_counter" CACHE PATH "Path to the cpu_counter project containing perf.h")
@@ -120,6 +114,13 @@ add_pixelshuffle_exe(pngLAB pngLAB.cpp "${OFLAG}" "OUTPUT;ANIMATION;${PNGLAB_ARC
 add_pixelshuffle_exe(pngLAB_clean pngLAB_clean.cpp "${OFLAG}" "OUTPUT;ANIMATION;${PNGLAB_ARCH_DEFS}" "")
 add_pixelshuffle_exe(pngLAB_spiral pngLAB_spiral.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
 add_pixelshuffle_exe(pngLAB_pretty pngLAB_pretty.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_blur_anneal pngLAB_blur_anneal.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_coarse_patches pngLAB_coarse_patches.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_particle_flow pngLAB_particle_flow.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_hilbert_sort pngLAB_hilbert_sort.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_wavefront_flow pngLAB_wavefront_flow.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_random_walk_relax pngLAB_random_walk_relax.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
+add_pixelshuffle_exe(pngLAB_transport_stream pngLAB_transport_stream.cpp "${OFLAG}" "OUTPUT;ANIMATION" "")
 add_pixelshuffle_exe(pngLAB_bench_core pngLAB.cpp "${OFLAG}" "PROFILE_STATS;${PNGLAB_ARCH_DEFS}" "")
 add_pixelshuffle_exe(pngLAB_bench_e2e pngLAB.cpp "${OFLAG}" "PROFILE_STATS;OUTPUT;ANIMATION;${PNGLAB_ARCH_DEFS}" "")
 add_pixelshuffle_exe(shouldSwap_ab_harness pngLAB.cpp "${OFLAG}" "${PNGLAB_HARNESS_DEFS}" "")
