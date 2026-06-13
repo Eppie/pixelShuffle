@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Emit build/compile_commands.json so clangd resolves includes (e.g. png.h).
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(COMMON_FLAGS
     -fno-stack-protector
     -march=native

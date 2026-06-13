@@ -23,6 +23,7 @@ test.png
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
+compile_commands.json
 build/
 build-*/
 variant_runs/

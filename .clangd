@@ -1,0 +1,2 @@
+# clangd reads the compilation database from the out-of-source build tree.
+CompilationDatabase: build
